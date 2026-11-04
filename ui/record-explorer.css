@@ -1,0 +1,30 @@
+.record-query-form {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;margin:16px 0}
+.record-query-form label {grid-column:1/-1;font-size:12px;font-weight:650;color:var(--muted)}
+.record-query-form select {width:100%;min-width:0;padding:9px;border:1px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink);font:inherit}
+.record-query-summary {font-size:12px;color:var(--muted)}
+.record-query-table {max-width:100%;max-height:400px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.record-query-table table {border-collapse:collapse;width:100%;font-size:12px;text-align:left}
+.record-query-table caption {text-align:left;padding:10px;font-weight:650}
+.record-query-table th {background:var(--bg);font-size:11px;text-transform:capitalize;white-space:nowrap}
+.record-query-table td,.record-query-table th {padding:9px 10px;border-top:1px solid var(--line);vertical-align:top}
+.record-query-table td {min-width:90px;max-width:320px;overflow-wrap:anywhere;white-space:pre-wrap}
+.record-query-table td .text-button {text-align:left;min-width:100px}
+.record-query-details {margin-top:14px;font-size:12px}
+.record-query-details summary {cursor:pointer;color:var(--muted)}
+.record-query-details pre {max-height:180px;white-space:pre-wrap;overflow-wrap:anywhere}
+.record-query-details p {overflow-wrap:anywhere}
+.record-query-stale {padding:10px;border-left:3px solid var(--amber);background:var(--amber-bg);font-size:12px}
+#matterRecords {min-width:0}
+#matterRecords {scroll-margin-top:90px}
+@media(max-width:600px){
+  .record-query-table {max-height:520px}
+  .record-query-table thead {display:none}
+  .record-query-table table,.record-query-table tbody,.record-query-table tr,.record-query-table td {display:block;width:auto;min-width:0;max-width:none}
+  .record-query-table tr+tr {border-top:2px solid var(--line)}
+  .record-query-table td {border-top:0;padding:6px 12px}
+  .record-query-table td::before {content:attr(data-label);display:block;font-size:10px;font-weight:650;text-transform:capitalize;color:var(--muted);margin-bottom:3px}
+  .record-query-table td:first-child {padding-top:12px}
+  .record-query-table td:last-child {padding-bottom:12px}
+  .record-query-table details p {font-size:11px;margin:6px 0}
+}
+@media(max-width:480px){.record-query-form {grid-template-columns:1fr}.record-query-form button {width:100%}}

@@ -1,0 +1,32 @@
+/* Question-led intake: task suggestions stay subordinate to the user's draft. */
+.task-starters{display:flex;flex-wrap:wrap;gap:7px;margin:-2px 0 23px;align-items:center}.task-starters>span{flex-basis:100%;font-size:11px;color:var(--muted);margin-bottom:3px}.task-starters button{background:#f4f7f2;color:#345c4d;border:1px solid #d6e1d6;border-radius:18px;min-height:36px;font-size:11px;padding:7px 12px;line-height:1.4}.task-starters button:hover{background:#e8f0e7;border-color:#9eb8a2}.task-starters button:focus-visible{outline:3px solid #2b7a64;outline-offset:3px}.intake-dropzone{border:1px dashed #b3c8b6;border-radius:7px;padding:15px;background:#f8faf5;transition:background .15s,border-color .15s}.intake-dropzone.is-dragging{border:2px solid #2b7a64;padding:14px;background:#e6f1e8}.intake-dropzone .attachment-label{margin:0 0 7px}.intake-dropzone>p:first-of-type{font-size:12px;color:var(--muted);margin:0 0 12px;line-height:1.6}.intake-dropzone:focus-within{outline:2px solid #2b7a64;outline-offset:3px}.intake-file-limits{font-size:11px;color:var(--muted);margin-top:10px}.intake-file-limits summary{cursor:pointer;min-height:28px;padding-top:4px}.intake-file-limits p{line-height:1.7;margin:7px 0;overflow-wrap:anywhere}.intake-file-limits code{font-size:inherit}.matter-search-label{display:block;font-size:11px;color:var(--muted);margin:15px 0 8px}.matter-search-label input{display:block;width:100%;font:13px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);padding:11px 12px;border:1px solid #cad6ce;border-radius:6px;background:#fff;margin-top:7px;min-height:42px}.matter-search-label input:focus-visible{outline:3px solid #2b7a64;outline-offset:3px}
+@media(max-width:600px){.task-starters{gap:7px;margin-bottom:20px}.task-starters button{min-height:44px;padding:8px 11px;font-size:11px;flex:1 1 calc(50% - 7px);border-radius:7px}.intake-dropzone{padding:13px}.intake-dropzone.is-dragging{padding:12px}.intake-dropzone input[type=file]{font-size:12px}.intake-file-limits summary{min-height:40px;display:list-item;padding-top:10px}.matter-search-label input{font-size:16px;min-height:44px}}
+@media(prefers-reduced-motion:reduce){.intake-dropzone{transition:none}}
+
+/* Start with the user's question; optional framing tools stay one step away. */
+#homeView .workspace-title{margin-bottom:18px}
+#homeView .intake-layout{gap:24px}
+#homeView #intakeMode{margin:0 0 18px;padding:10px 13px}
+.intake-starters{margin:0 0 17px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.intake-starters>summary{font-size:12px;line-height:1.5;color:#376354;cursor:pointer;min-height:36px;padding:8px 0}
+.intake-starters .task-starters{margin:9px 0 3px}
+#homeView .intake-composer{padding:22px}
+#homeView .intake-composer textarea{min-height:136px}
+#homeView .intake-dropzone{padding:12px 14px}
+#homeView .intake-dropzone>p:first-of-type{margin-bottom:8px}
+#homeView .intake-attachments{padding-top:16px;margin-top:16px}
+#homeView .intake-context{margin-top:14px;padding-top:12px}
+#homeView .intake-context summary{min-height:36px;line-height:1.6}
+#homeView .composer-actions{margin-top:16px}
+#homeView .draft-note{padding-top:12px;margin-top:14px}
+#homeView .intake-rail{padding-top:5px}
+#homeView .intake-rail .workspace-caution{margin-top:0}
+@media(max-width:600px){
+  #homeView .workspace-title{margin-bottom:14px}
+  #homeView .intake-composer{padding:16px}
+  #homeView .intake-composer textarea{font-size:16px;min-height:132px}
+  #homeView #intakeMode{margin-bottom:14px;font-size:11px}
+  .intake-starters>summary{min-height:44px;padding:11px 0}
+  #homeView .intake-context summary{min-height:44px}
+  #homeView .intake-dropzone{padding:12px}
+}

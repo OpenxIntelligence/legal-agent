@@ -1,0 +1,254 @@
+/* Matter desk: compact task orientation, one working pane, adjacent evidence. */
+#matterView [hidden]{display:none!important}
+#matterView .matter-toolbar{gap:16px;margin-bottom:14px;align-items:flex-end}
+#matterView .matter-switcher{display:block;min-width:0;flex:1;max-width:590px;font-size:11px;color:var(--muted);line-height:1.5}
+#matterView .matter-switcher select{display:block;width:100%;min-height:44px;margin-top:4px;padding:9px 34px 9px 12px;border:1px solid #c6d5cb;border-radius:6px;background:#fff;color:var(--ink);font:14px/1.4 system-ui;overflow:hidden;text-overflow:ellipsis}
+#matterView .matter-toolbar>button{min-height:44px;flex-shrink:0;font-size:12px;white-space:normal}
+#matterView .matter-title{gap:16px;align-items:center;margin-bottom:10px}
+#matterView .matter-title h1{font-size:23px;line-height:1.35;letter-spacing:-.45px;margin:0 0 5px;max-width:none}
+#matterView .matter-title .workspace-eyebrow{font-size:9px!important;margin-bottom:4px!important}
+#matterView .matter-title p{font-size:12px;line-height:1.5}
+#matterView .matter-status{flex-shrink:0;margin-top:0}
+#matterView #matterMode{margin-top:10px;padding:8px 12px;font-size:11px}
+#matterView .matter-overview{margin:12px 0 16px;padding:13px 16px;border-radius:8px}
+#matterView .overview-top{gap:16px;align-items:center}
+#matterView .overview-top .workspace-eyebrow{font-size:9px!important;margin-bottom:4px!important}
+#matterView .overview-next{font-size:14px;line-height:1.5}
+#matterView .run-picker-label{min-width:190px;max-width:320px;flex:0 1 300px}
+#matterView .run-picker-label select{margin-top:3px;font-size:12px;min-height:44px;padding:8px 10px}
+#matterView .overview-bottom{gap:10px;margin-top:10px;padding-top:9px}
+#matterView .overview-counts{gap:12px;font-size:11px}
+#matterView .matter-jumps button{min-height:36px;padding:7px 10px;font-size:11px}
+#matterView .overview-action{font-size:12px;min-height:36px;margin-top:5px}
+#matterView .history-notice{padding:9px 12px;margin-top:8px}
+#matterView .desk-layout{grid-template-columns:minmax(0,1.5fr) minmax(310px,1fr);gap:20px;margin-top:0}
+#matterDesk>.workspace-main,#matterDesk>.workspace-evidence{min-width:0}
+#matterDesk .workspace-tabs{display:flex;gap:4px;padding:4px;background:#eaf0e9;border:1px solid #d8e2d8;border-radius:8px;margin-bottom:12px}
+#matterDesk .workspace-tabs button{flex:1;min-height:44px;padding:10px 14px;border:1px solid transparent;border-radius:5px;background:transparent;color:#50675c;font:600 13px/1.4 system-ui}
+#matterDesk .workspace-tabs button[aria-pressed="true"]{background:#fff;border-color:#c8d8cb;color:#173e33;box-shadow:0 1px 3px #173a3610}
+#matterDesk .workspace-tabs button:hover{color:#173e33;background:#f7faf5}
+#matterDesk .agent-panel{padding:20px;margin-bottom:16px;border-radius:8px}
+#matterDesk .agent-panel .section-heading{margin-bottom:14px;gap:10px}
+#matterDesk .workspace-pane-hint{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 14px}
+#matterDesk .matter-conversation{max-height:none;overflow:visible;overscroll-behavior:auto;scrollbar-gutter:auto;padding:0;gap:12px}
+#matterDesk .message-body,#matterDesk .matter-finding p{font-size:14px;line-height:1.75}
+#matterDesk .matter-message{padding:13px 15px}
+#matterDesk .from-user{margin-left:16px}
+#matterDesk .matter-reply{margin-top:16px;padding-top:16px}
+#matterDesk .matter-reply textarea{font-size:14px;min-height:112px}
+#matterDesk .matter-reply .composer-actions{margin-top:10px}
+#matterDraftStatus{font-size:11px;line-height:1.6;color:var(--muted);margin-top:7px}
+#matterDraftStatus:empty{display:none}
+#matterDesk .workspace-evidence{padding-left:20px;border-left:1px solid var(--line)}
+#matterDesk .workspace-evidence .workspace-rail{display:block;padding:0;border:0}
+#matterDesk .workspace-evidence .rail-section{margin:0 0 16px;padding:0 0 16px}
+#matterDesk .workspace-evidence .rail-section h2{margin-bottom:10px;font-size:14px}
+#matterDesk .workspace-evidence details>summary{min-height:44px;padding:11px 0;font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);line-height:1.6}
+#matterDesk .workspace-evidence details[open]>summary{margin-bottom:8px}
+#matterDesk .workspace-evidence details .matter-plan,#matterDesk .workspace-evidence details .missing-list{font-size:12px}
+#matterDesk .matter-documents strong{font-size:13px;line-height:1.5}
+#matterDesk .matter-documents span{font-size:11px}
+#matterDesk .matter-documents .text-button{font-size:12px;min-height:40px}
+#matterDesk .source-viewer{background:#f9fbf7;border-color:#b9cfc0;padding:16px}
+#matterDesk .source-toolbar{gap:10px;margin-bottom:10px}
+#matterDesk .source-toolbar h2{font-size:14px;line-height:1.5}
+#matterDesk .source-toolbar button{min-height:40px}
+#matterDesk #matterSourceBody{max-height:55vh;overflow:auto;overscroll-behavior:auto;padding-right:4px}
+#matterDesk .source-text-page{margin-top:12px;padding-top:10px}
+#matterDesk .source-text-page pre{max-height:none;overflow:visible;padding:10px;font-size:13px;line-height:1.8}
+#matterDesk .run-actions{margin-top:16px;padding-top:14px}
+#matterDesk .run-actions button,#matterDesk .evidence-review-action button{min-height:44px}
+#matterDesk .evidence-review-action{padding:15px;margin-top:16px}
+#matterView :is(button,select,textarea,a,summary):focus-visible{outline:3px solid #2b7a64;outline-offset:3px}
+#matterView :is(h1,h2):focus:not(:focus-visible){outline:none;box-shadow:none}
+@media(max-width:1099px){
+  #matterView .desk-layout{grid-template-columns:minmax(0,1fr)}
+  #matterDesk .workspace-evidence{border-left:0;border-top:1px solid var(--line);padding:18px 0 0}
+  #matterDesk .workspace-evidence .workspace-rail{display:block}
+  #matterView .overview-top{align-items:flex-start;flex-wrap:wrap}
+  #matterView .run-picker-label{min-width:0;flex:1 1 230px;max-width:none}
+}
+@media(max-width:600px){
+  #matterView .matter-toolbar{align-items:stretch;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  #matterView .matter-switcher{flex-basis:100%;max-width:none;font-size:12px}
+  #matterView .matter-switcher select{font-size:16px}
+  #matterView .matter-toolbar>button{max-width:none;font-size:12px;padding:8px 12px}
+  #matterView .matter-title{align-items:flex-start;flex-wrap:wrap;gap:7px}
+  #matterView .matter-title h1{font-size:21px;letter-spacing:-.3px}
+  #matterView .matter-title p{font-size:12px}
+  #matterView .matter-overview{padding:12px;margin-bottom:12px}
+  #matterView .overview-top{gap:10px}
+  #matterView .overview-next{font-size:14px}
+  #matterView .run-picker-label{flex-basis:100%;font-size:12px}
+  #matterView .run-picker-label select{font-size:16px}
+  #matterView .matter-jumps button,#matterView .overview-action{min-height:44px;font-size:12px}
+  #matterView .overview-counts{font-size:11px;gap:10px}
+  #matterDesk .agent-panel{padding:15px}
+  #matterDesk .workspace-tabs button{font-size:13px;padding:10px 8px}
+  #matterDesk .from-user{margin-left:8px}
+  #matterDesk .matter-message{padding:12px}
+  #matterDesk .message-body,#matterDesk .matter-finding p{font-size:14px}
+  #matterDesk .matter-reply textarea{font-size:16px}
+  #matterDesk .matter-documents .text-button,#matterDesk .source-toolbar button{min-height:44px}
+  #matterDesk .source-toolbar{display:flex}
+  #matterDesk .source-toolbar button{margin-top:0}
+  #matterDesk #matterSourceBody{max-height:55vh}
+  #matterDesk .source-text-page pre{font-size:14px}
+}
+/* Screenshot review: keep the task legible while reducing repeated orientation. */
+#matterTitle:focus{outline:none!important;box-shadow:none!important}
+#matterView .matter-title .workspace-eyebrow{display:none}
+#matterView .overview-top .workspace-eyebrow{margin-bottom:2px!important}
+@media(max-width:600px){
+  #matterView .matter-toolbar{align-items:center;margin-bottom:10px;gap:5px 10px}
+  #matterView .matter-toolbar>a{min-height:44px;display:inline-flex;align-items:center;font-size:12px}
+  #matterView .matter-title{gap:4px;margin-bottom:6px}
+  #matterView .matter-title h1{font-size:20px;line-height:1.35;margin-bottom:4px}
+  #matterView #matterMode{font-size:10px;line-height:1.5;padding:7px 10px;margin-top:7px}
+  #matterView .matter-overview{margin:9px 0 12px;padding:11px 12px}
+  #matterView .overview-bottom{margin-top:7px;padding-top:7px;gap:3px 9px}
+  #matterView .overview-counts{gap:7px}
+  #matterView .matter-jumps{width:auto;margin-left:auto;gap:4px}
+  #matterView .matter-jumps button{flex:none;padding:7px 10px}
+  #matterView .overview-action{margin-top:0}
+}
+/* IDE workspace: steering stays beside the work; no mutually exclusive panes. */
+#matterView .desk-layout{grid-template-columns:minmax(0,1fr);gap:18px}
+#matterDesk>.workspace-main{display:grid;grid-template-columns:minmax(290px,340px) minmax(0,1fr);gap:18px;align-items:start}
+#matterDesk #matterConversationPanel{grid-column:1;grid-row:1;margin-bottom:0;position:sticky;top:90px;display:flex;flex-direction:column;max-height:calc(100vh - 106px);min-height:0;padding:17px}
+#matterDesk .workspace-product{grid-column:2;grid-row:1;min-width:0}
+#matterDesk .workspace-product>#matterResults{margin-bottom:16px}
+#matterDesk #matterConversationPanel>.section-heading{display:block;flex-shrink:0}
+#matterDesk #matterConversationPanel .subtle-label{display:block;margin-top:5px}
+#matterDesk #matterConversation{overflow:auto;overscroll-behavior:auto;min-height:80px;max-height:420px;padding-right:5px;scrollbar-gutter:stable;flex:1 1 auto}
+#matterDesk #matterReplyForm{flex:0 0 auto;margin-top:13px;padding-top:13px}
+#matterDesk #matterReplyForm .composer-actions{flex-wrap:wrap}
+#matterDesk #matterReplyForm .composer-actions>span{font-size:11px;line-height:1.5}
+#matterDesk #matterReplyForm textarea{min-height:100px}
+#matterDesk>.workspace-evidence{padding:18px 0 0;border:0;border-top:1px solid var(--line);min-width:0}
+#matterDesk>.workspace-evidence:has(#matterSourceViewer:not([hidden])){display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:20px;align-items:start}
+#matterDesk .workspace-evidence #matterSourceViewer{margin-bottom:0}
+#matterDesk .workspace-evidence #matterRail{min-width:0}
+@media(min-width:1700px){
+  #matterView{max-width:1600px}
+  #matterView .desk-layout{grid-template-columns:minmax(0,1fr) 310px;gap:20px}
+  #matterDesk>.workspace-main{grid-template-columns:320px minmax(0,1fr);gap:18px}
+  #matterDesk>.workspace-evidence,#matterDesk>.workspace-evidence:has(#matterSourceViewer:not([hidden])){display:block;border-top:0;border-left:1px solid var(--line);padding:0 0 0 18px}
+  #matterDesk .workspace-evidence #matterSourceViewer{margin-bottom:16px}
+}
+@media(max-width:1099px){
+  #matterDesk>.workspace-main{grid-template-columns:minmax(0,1fr);gap:16px}
+  #matterDesk .workspace-product{grid-column:1;grid-row:1}
+  #matterDesk #matterConversationPanel{grid-column:1;grid-row:2;position:static;max-height:none;padding:20px}
+  #matterDesk #matterConversation{max-height:420px}
+}
+@media(max-width:700px){
+  #matterDesk>.workspace-evidence:has(#matterSourceViewer:not([hidden])){display:block}
+  #matterDesk .workspace-evidence #matterSourceViewer{margin-bottom:16px}
+}
+@media(max-width:600px){
+  #matterDesk #matterConversationPanel{padding:15px}
+  #matterDesk #matterConversation{max-height:360px}
+}
+/* These links move focus within the desk; every working panel stays visible. */
+#matterView .workspace-jumps{display:flex;align-items:center;flex-wrap:wrap;gap:4px 18px;margin:0 0 12px;border-bottom:1px solid var(--line);padding:0 0 5px}
+#matterView .workspace-jumps a{display:inline-flex;align-items:center;min-height:38px;padding:5px 0;color:#205b4f;font-size:12px;line-height:1.5;text-decoration:underline;text-underline-offset:4px;overflow-wrap:anywhere}
+#matterView .workspace-jumps a:hover{color:#123f33;text-decoration-thickness:2px}
+@media(max-width:600px){
+  #matterView .workspace-jumps{gap:0 14px;margin-bottom:10px;padding-bottom:3px}
+  #matterView .workspace-jumps a{min-height:44px;font-size:12px}
+}
+
+/* The persisted review editor shares the work-product column with findings. */
+#matterDesk #matterEditor{min-width:0;scroll-margin-top:20px}
+#matterEditor h2{font-size:16px;line-height:1.5;margin:0 0 10px}
+#matterEditor h3{font-size:14px;line-height:1.5;margin:18px 0 10px}
+#matterEditor label{display:block;font-size:13px;font-weight:600;line-height:1.6;margin:10px 0 6px}
+#matterEditor textarea{display:block;box-sizing:border-box;width:100%;max-width:100%;min-height:110px;resize:vertical;padding:11px 12px;border:1px solid #b9ccc0;border-radius:6px;background:#fdfefb;color:var(--ink);font:14px/1.7 system-ui}
+#matterEditor [data-editor-row]{padding:14px 0;border-top:1px solid var(--line);min-width:0}
+#matterEditor [data-editor-row]:first-child{border-top:0}
+#matterEditor [data-editor-assertion]{overflow-wrap:anywhere;font-size:14px;line-height:1.65;margin:0 0 8px}
+#matterEditor :is(input,select){box-sizing:border-box;max-width:100%;min-height:40px;font:13px/1.5 system-ui;color:var(--ink)}
+#matterEditor :is([data-editor-save],[data-editor-cancel]){min-height:44px;margin:12px 8px 0 0;padding:10px 14px;font-size:13px}
+#matterEditor [role="status"],#matterEditor [role="alert"]{font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+@media(max-width:600px){
+  #matterEditor textarea,#matterEditor :is(input,select){font-size:16px}
+  #matterEditor [data-editor-row]{padding:12px 0}
+  #matterEditor :is(input,select){min-height:44px}
+}
+
+/* Short windows use document scrolling so the steering composer cannot be clipped. */
+@media(min-width:1100px) and (max-height:700px){
+  #matterDesk #matterConversationPanel{position:static;max-height:none}
+  #matterDesk #matterConversation{max-height:260px}
+}
+/* Matter mode places the copilot at the left edge and the dashboard over the work. */
+@media(min-width:1100px){
+  body[data-view="matter"] .app-nav{position:relative;inset:auto;flex-direction:row;align-items:center;width:100%;min-height:52px;padding:6px 16px;gap:10px;z-index:6}
+  body[data-view="matter"] .app-nav .brand{padding:0 16px 0 0;margin:0;font-size:16px;gap:8px}
+  body[data-view="matter"] .brand-mark{width:28px;height:30px;font-size:15px}
+  body[data-view="matter"] .brand small,body[data-view="matter"] .nav-section,body[data-view="matter"] .nav-note{display:none}
+  body[data-view="matter"] .app-nav>a:not(.brand){font-size:12px;padding:8px 12px;min-height:36px;align-items:center}
+  body[data-view="matter"] .nav-advanced{margin:0 0 0 auto;position:relative}
+  body[data-view="matter"] .nav-advanced summary{padding:9px 12px;font-size:12px;cursor:pointer}
+  body[data-view="matter"] .nav-advanced[open]>a{background:#173a36;min-width:160px}
+  body[data-view="matter"] header{margin-left:0;min-height:44px;padding:6px 16px;gap:8px}
+  body[data-view="matter"] header h1{font-size:12px}
+  body[data-view="matter"] .runtime-status{font-size:10px;padding:4px 9px}
+  body[data-view="matter"] main{margin-left:0;padding:12px 16px;gap:0}
+  body[data-view="matter"] #matterView{display:grid;grid-template-columns:minmax(300px,340px) minmax(0,1fr);column-gap:18px;row-gap:8px;max-width:none;align-items:start}
+  body[data-view="matter"] #matterView>.matter-toolbar{grid-column:2;grid-row:1;margin:0;gap:12px;align-items:center}
+  body[data-view="matter"] #matterView>.matter-title{grid-column:2;grid-row:2;margin:0}
+  body[data-view="matter"] #matterTitle{font-size:18px;line-height:1.35;margin-bottom:3px}
+  body[data-view="matter"] #matterView>.matter-title p{font-size:11px}
+  body[data-view="matter"] #matterMode{grid-column:2;grid-row:3;margin:0;padding:6px 10px;font-size:10px;line-height:1.5}
+  body[data-view="matter"] #matterError{grid-column:2;grid-row:4;margin:0}
+  body[data-view="matter"] #matterOverview{grid-column:2;grid-row:5;margin:0;padding:10px 12px}
+  body[data-view="matter"] #matterOverview .overview-top{flex-wrap:nowrap}
+  body[data-view="matter"] #matterOverview .overview-next{font-size:13px}
+  body[data-view="matter"] #matterOverview .overview-bottom{margin-top:7px;padding-top:6px}
+  body[data-view="matter"] #matterOverview .overview-action{display:inline-flex;align-items:center;min-height:28px;margin-top:2px;font-size:11px}
+  body[data-view="matter"] #matterOverview .matter-jumps button{min-height:32px}
+  body[data-view="matter"] #matterView>.workspace-jumps{grid-column:2;grid-row:6;margin:0;padding:0;gap:14px}
+  body[data-view="matter"] #matterView>.workspace-jumps a{min-height:32px;font-size:11px}
+  body[data-view="matter"] #matterDesk,body[data-view="matter"] #matterDesk>.workspace-main{display:contents}
+  body[data-view="matter"] #matterDesk #matterConversationPanel{grid-column:1;grid-row:1 / span 8;align-self:start;position:sticky;top:56px;height:calc(100vh - 124px);max-height:calc(100vh - 124px);min-height:0;padding:14px;overflow:hidden}
+  body[data-view="matter"] #matterDesk #matterConversationPanel>.section-heading{margin:0 0 10px}
+  body[data-view="matter"] #matterDesk #matterConversation{flex:1 1 0;min-height:0;max-height:none;overflow:auto}
+  body[data-view="matter"] #matterDesk #matterReplyForm{margin-top:10px;padding-top:10px}
+  body[data-view="matter"] #matterDesk #matterReplyForm>label{font-size:12px;margin-bottom:7px}
+  body[data-view="matter"] #matterDesk #matterReplyForm textarea{min-height:78px;height:90px;font-size:14px;padding:9px 10px}
+  body[data-view="matter"] #matterDesk #matterReplyForm .composer-actions{margin-top:7px;gap:7px}
+  body[data-view="matter"] #matterDesk #matterReplyForm .composer-actions>span{font-size:10px}
+  body[data-view="matter"] #matterDraftStatus{margin-top:5px;font-size:10px}
+  body[data-view="matter"] #matterDesk .workspace-product{grid-column:2;grid-row:7;min-width:0}
+  body[data-view="matter"] #matterDesk>.workspace-evidence,body[data-view="matter"] #matterDesk>.workspace-evidence:has(#matterSourceViewer:not([hidden])){grid-column:2;grid-row:8;border-left:0;border-top:1px solid var(--line);padding:14px 0 0;display:block}
+  body[data-view="matter"] #matterDesk>.workspace-evidence:has(#matterSourceViewer:not([hidden])){display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:18px}
+}
+/* Keep uploaded records in view beside the output, including laptop widths. */
+@media(min-width:1100px){
+  body[data-view="matter"] #matterView{grid-template-columns:300px minmax(0,1fr) 230px;column-gap:14px}
+  body[data-view="matter"] #matterView>:is(.matter-toolbar,.matter-title,#matterMode,#matterError,#matterOverview,.workspace-jumps){grid-column:2 / 4}
+  body[data-view="matter"] #matterDesk #matterConversationPanel{grid-column:1;grid-row:1 / span 7}
+  body[data-view="matter"] #matterDesk .workspace-product{grid-column:2;grid-row:7}
+  body[data-view="matter"] #matterDesk>.workspace-evidence,body[data-view="matter"] #matterDesk>.workspace-evidence:has(#matterSourceViewer:not([hidden])){grid-column:3;grid-row:7;display:block;border-top:0;border-left:1px solid var(--line);padding:0 0 0 14px}
+  body[data-view="matter"] #matterDesk .workspace-evidence #matterSourceViewer{padding:12px;margin-bottom:14px}
+  body[data-view="matter"] #matterDesk .source-toolbar{flex-wrap:wrap}
+  body[data-view="matter"] .app-nav>a[data-mode="gallery"]{font-size:11px;opacity:.75}
+}
+@media(min-width:1500px){
+  body[data-view="matter"] #matterView{grid-template-columns:330px minmax(0,1fr) 290px;column-gap:18px}
+}
+
+/* Attachment controls remain stable while the document list refreshes. */
+#matterUpload{padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--line);min-width:0}
+#matterUpload label{display:block;font-size:14px;margin-bottom:10px}
+#matterAddFiles{display:block;width:100%;min-width:0;font-size:11px}
+#matterAddFiles::file-selector-button{padding:8px 10px;border:1px solid #b9cfc0;border-radius:5px;background:#fff;color:var(--ink);cursor:pointer;margin:0 7px 5px 0}
+#matterUpload .field-hint,#matterUploadStatus{font-size:11px;line-height:1.55;overflow-wrap:anywhere}
+
+/* On smaller screens, act on the agent request before traversing long results. */
+@media(max-width:1099px){
+  #matterDesk #matterConversationPanel{grid-row:1}
+  #matterDesk .workspace-product{grid-row:2}
+}

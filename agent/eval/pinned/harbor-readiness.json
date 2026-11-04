@@ -1,0 +1,58 @@
+{
+  "case": "harbor-readiness",
+  "citation_set": [
+    [
+      "DOC-NOTE",
+      "1"
+    ],
+    [
+      "DOC-STATUS",
+      "1"
+    ]
+  ],
+  "claims": [
+    {
+      "assessed": 4,
+      "outcome": "passed",
+      "passed": true
+    }
+  ],
+  "client": "scripted",
+  "coverage": {
+    "answered": 2,
+    "escalated": 0,
+    "open": 0,
+    "total": 2
+  },
+  "diagnostics": {
+    "agent_tokens": 35630,
+    "tool_calls": 6,
+    "tool_tokens": 18220,
+    "turns": 16
+  },
+  "escalations": 0,
+  "memo": {
+    "status": "awaiting_signoff"
+  },
+  "refusals": 0,
+  "status": "awaiting_signoff",
+  "tool_sequence": [
+    "set_checklist",
+    "analyze_document",
+    "record_fact",
+    "record_fact",
+    "identify_task",
+    "validate_decomposition",
+    "answer_foundational",
+    "answer_foundational",
+    "answer_foundational",
+    "answer_foundational",
+    "answer_foundational",
+    "answer_foundational",
+    "adversarial_review",
+    "plan_workflow",
+    "declare_work_product",
+    "submit_memo"
+  ],
+  "verification": true
+}

@@ -1,0 +1,92 @@
+/* Evidence review: the claim and its source stay at the center of the workflow. */
+.review-heading { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+.review-heading #artH1 { font:600 23px/1.25 var(--font, system-ui, sans-serif); margin:4px 0 8px; letter-spacing:-.4px; }
+.review-heading #artStatus,.review-heading [role="note"] { flex-basis:100%; }
+.review-eyebrow { font-size:10px; font-weight:700; letter-spacing:1.6px; color:var(--muted); }
+.review-attention { border-left:3px solid #a46a28; }
+.review-metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+.review-metrics>div { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px; }
+.review-metrics strong { font-size:25px; font-weight:600; color:var(--ink); }
+.review-metrics span { font-size:12px; color:var(--muted); }
+.review-next { margin:14px 0 10px; font-size:14px; line-height:1.5; }
+.review-layers { display:flex; flex-wrap:wrap; gap:7px 20px; font-size:12px; line-height:1.6; }
+.review-scope { margin:9px 0 0; line-height:1.5; }
+.review-cockpit { display:grid; grid-template-columns:minmax(350px,.95fr) minmax(360px,1.05fr); align-items:start; gap:18px; margin:18px 0; }
+.review-cockpit>.panel,.review-selected>.panel { margin:0; }
+.review-claims { position:sticky; top:15px; max-height:calc(100vh - 40px); overflow:auto; }
+.review-table-scroll { overflow:auto; }
+.review-claims .audit-table { font-size:12px; min-width:0; width:100%; }
+.review-claims .audit-table td { vertical-align:top; overflow-wrap:anywhere; }
+.review-claims .audit-table td:first-child { width:44px; }
+.review-claims .audit-table td:last-child { width:110px; line-height:1.7; }
+.review-claims .audit-table th { padding:8px 5px; }
+.review-claims .audit-table td { padding:12px 5px; }
+.claim-select { display:block; width:100%; border:0; border-radius:0; padding:0 0 6px; background:transparent; color:var(--ink); text-align:left; line-height:1.5; font-size:13px; }
+.claim-select:hover { background:transparent; color:#14685c; text-decoration:underline; }
+.selected-claim { background:#eef4ed; box-shadow:inset 3px 0 #34715e; }
+.review-claim-detail>h2 { font-size:16px; }
+.claim-source-preview { background:#f4f6f0; border:1px solid var(--line); border-radius:6px; padding:12px; margin:12px 0; overflow-wrap:anywhere; }
+.claim-source-preview pre { max-height:380px; overflow:auto; }
+.review-section { margin:12px 0; border:1px solid var(--line); border-radius:7px; background:#fff; }
+.review-section>summary,.claim-tools>summary { cursor:pointer; font-weight:600; font-size:13px; padding:14px; }
+.review-section>summary:hover,.claim-tools>summary:hover { background:#f2f6ee; }
+.review-section>summary span { font-weight:400; color:var(--muted); margin-left:10px; font-size:12px; }
+.review-section>.panel { border:0; margin:0; border-top:1px solid var(--line); border-radius:0; }
+.claim-tools { border-top:1px solid var(--line); margin-top:12px; }
+.claim-tools>summary { padding:12px 0; }
+.review-risk-note { border-left:3px solid #a46a28; padding:10px 12px; background:#fff7e9; line-height:1.6; font-size:13px; margin:10px 0; }
+.review-risk-accept { display:block; margin:10px 0; line-height:1.6; }
+@media(max-width:1180px) { .review-cockpit { grid-template-columns:minmax(0,1fr); } .review-claims { position:static; max-height:none; } }
+@media(max-width:650px) { .review-metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; } .review-cockpit { gap:12px; } .review-heading #artH1 { font-size:20px; } .review-section>summary span { display:block; margin:4px 0 0; } .review-claims .audit-table td:last-child { width:88px; } }
+.matter-review-back {display:inline-block;margin:0 0 18px;font-size:13px;text-decoration:none}
+
+/* Keep table identifiers intact and make source inspection the primary action. */
+#artifactView .review-heading #artH1 { font-size:26px!important; line-height:1.25; }
+.review-heading>div:first-child { min-width:0; }
+.review-claims .audit-table { display:table; table-layout:fixed; overflow:visible; }
+.review-claims .audit-table th:first-child,.review-claims .audit-table td:first-child { width:54px; white-space:nowrap; overflow-wrap:normal; }
+.review-claims .audit-table th:last-child,.review-claims .audit-table td:last-child { width:128px; }
+.review-claims .audit-table td { padding:14px 8px; }
+.review-claims .audit-table th { padding:10px 8px; }
+.review-claims .rowbtn { display:inline-flex; align-items:center; min-height:44px; min-width:36px; }
+.review-claims .claim-select { min-height:44px; font-size:14px; }
+.claim-reference { line-height:1.6; }
+.claim-kind { display:inline-block; margin-right:6px; text-transform:capitalize; white-space:nowrap; }
+.claim-kind::after { content:' ·'; }
+.review-claims .audit-table tr[aria-selected="true"] td { background:#eaf3ed; }
+.review-claims .audit-table tr[aria-selected="true"] td:first-child { box-shadow:inset 3px 0 #34715e; }
+.review-claims .audit-table tr[aria-selected="true"] .claim-select { font-weight:600; }
+.selected-claim-meta { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:6px 14px; margin-bottom:14px; }
+.selected-claim-meta h2 { margin:0; font-size:16px; }
+.selected-claim-meta>span { color:var(--muted); font-size:12px; text-transform:capitalize; }
+.selected-claim-assertion { font-size:17px; line-height:1.6; margin:0 0 22px; color:var(--ink); overflow-wrap:anywhere; }
+.claim-checks { font-size:13px; line-height:1.6; margin-bottom:16px; }
+.claim-checks>.badge { margin-left:6px; }
+.claim-citation { margin-top:12px; padding:14px; border:1px solid var(--line); border-radius:7px; background:#fbfcf8; }
+.citation-reference { display:flex; flex-wrap:wrap; gap:5px 12px; font-size:12px; color:var(--muted); }
+.claim-citation blockquote { margin:12px 0; font-size:14px; line-height:1.65; white-space:pre-wrap; overflow-wrap:anywhere; }
+.claim-citation .citation-problem { color:#915318; margin:8px 0; }
+.review-claim-detail .source-action { display:inline-flex; align-items:center; justify-content:space-between; gap:12px; min-height:44px; padding:8px 12px; border:1px solid #bdcfc1; border-radius:5px; color:#14685c; background:white; font-weight:600; }
+.claim-source-preview { padding:14px; margin:16px 0; line-height:1.6; }
+.claim-source-preview:has(>p:only-child) { border:0; background:transparent; padding:0; margin:10px 0 20px; }
+.claim-source-preview:has(>p:only-child)>p { margin:0; }
+.claim-primary-actions { margin:18px 0; }
+.review-claim-detail .claim-tools>summary { padding:16px 2px; min-height:48px; font-size:14px; }
+.review-claim-detail .claim-tools>label,.review-claim-detail .claim-tools .steps>label { display:flex; flex-direction:column; gap:7px; margin:14px 0; font-size:13px; font-weight:500; color:var(--ink); }
+.review-claim-detail .claim-tools input:not([type="checkbox"]),.review-claim-detail .claim-tools select,.review-claim-detail .claim-tools textarea { display:block; width:100%; min-height:42px; padding:10px 12px; font:400 14px/1.5 system-ui,sans-serif; border:1px solid #c6d2c8; border-radius:5px; background:white; }
+.review-claim-detail .claim-tools textarea { min-height:110px; }
+.review-claim-detail .claim-tools .steps { gap:10px; align-items:end; }
+.review-claim-detail .claim-tools .steps>label { flex:1 1 150px; }
+.review-claim-detail button { min-height:42px; }
+.claim-edit-fields { display:grid; grid-template-columns:minmax(0,1fr) 90px; gap:12px; margin:14px 0; }
+.claim-edit-fields label { display:flex; flex-direction:column; gap:7px; font-size:13px; }
+.review-claim-detail .claim-tools>label:has(input[type="checkbox"]) { display:block; line-height:1.6; }
+.review-claim-detail .claim-tools>label input[type="checkbox"] { margin-right:7px; }
+@media(max-width:650px) {
+  #artifactView .review-heading #artH1 { font-size:22px!important; }
+  .review-claims .audit-table th:first-child,.review-claims .audit-table td:first-child { width:42px; }
+  .review-claims .audit-table th:last-child,.review-claims .audit-table td:last-child { width:102px; }
+  .review-claims .audit-table td,.review-claims .audit-table th { padding-left:5px; padding-right:5px; }
+  .review-claims .claim-select { font-size:13px; }
+  .selected-claim-assertion { font-size:16px; }
+}

@@ -1,0 +1,29 @@
+{
+  "case": "harbor-gap",
+  "citation_set": [],
+  "claims": [],
+  "client": "scripted",
+  "coverage": {
+    "answered": 0,
+    "escalated": 1,
+    "open": 1,
+    "total": 2
+  },
+  "diagnostics": {
+    "agent_tokens": 7170,
+    "tool_calls": 3,
+    "tool_tokens": 8660,
+    "turns": 4
+  },
+  "escalations": 1,
+  "memo": null,
+  "refusals": 0,
+  "status": "needs_input",
+  "tool_sequence": [
+    "set_checklist",
+    "analyze_document",
+    "record_fact",
+    "request_evidence"
+  ],
+  "verification": true
+}

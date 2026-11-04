@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+if [[ -n "${PYTHON:-}" ]]; then
+  runtime="$PYTHON"
+elif [[ -x "$ROOT/.venv/bin/python" ]]; then
+  runtime="$ROOT/.venv/bin/python"
+elif [[ -x "$ROOT/agent/.venv/bin/python" ]]; then
+  runtime="$ROOT/agent/.venv/bin/python"
+else
+  runtime=python3
+fi
+exec "$runtime" "$ROOT/scripts/launch.py" "$@"

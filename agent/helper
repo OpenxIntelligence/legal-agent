@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# The agent's own Python: ./helper setup creates .venv here and installs requirements.txt.
+if [[ -z "${PYTHON:-}" ]]; then
+  if [[ -x .venv/bin/python ]]; then PYTHON=.venv/bin/python; else PYTHON=python3; fi
+fi
+COMMAND="${1:-help}"
+shift || true
+
+load_env() {
+  # Isolated workspaces must never source live credentials.
+  if [[ -n "${LEGAL_AGENT_ROOT:-}" ]]; then return; fi
+  # CASE_DIR set in the environment wins over .env: CASE_DIR=../cases/other ./helper setup
+  local case_dir="${CASE_DIR:-}"
+  if [[ -f .env ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source .env
+    set +a
+  fi
+  if [[ -n "$case_dir" ]]; then export CASE_DIR="$case_dir"; fi
+}
+
+case "$COMMAND" in
+  setup)
+    [[ -f .env ]] || cp .env.example .env
+    [[ -x .venv/bin/python ]] || python3 -m venv .venv
+    .venv/bin/python -m pip install --quiet --disable-pip-version-check -r requirements.txt
+    PYTHON=.venv/bin/python
+    load_env
+    "$PYTHON" scripts/reset_case.py
+    "$PYTHON" scripts/preflight.py --expect-release initial --check-key
+    ;;
+  reset)
+    load_env
+    "$PYTHON" scripts/reset_case.py "$@"
+    ;;
+  run)
+    load_env
+    "$PYTHON" -m legal_agent "$@"
+    ;;
+  review)
+    "$PYTHON" scripts/review.py "$@"
+    ;;
+  quarantine)
+    "$PYTHON" scripts/quarantine.py "$@"
+    ;;
+  describe)
+    load_env
+    "$PYTHON" scripts/describe.py "$@"
+    ;;
+  verify)
+    load_env
+    "$PYTHON" scripts/verify.py "$@"
+    ;;
+  branch)
+    load_env
+    "$PYTHON" scripts/branch.py "$@"
+    ;;
+  artifact)
+    # Isolated demos must never source provider credentials from the live .env.
+    if [[ -z "${LEGAL_AGENT_ROOT:-}" ]]; then load_env; fi
+    "$PYTHON" scripts/artifact.py "$@"
+    ;;
+  test)
+    load_env
+    if [[ "${1:-}" == "--verification" ]]; then export VERIFICATION=on; else export VERIFICATION=off; fi
+    "$PYTHON" scripts/preflight.py --expect-release auto
+    "$PYTHON" -m unittest discover -s tests
+    ;;
+  regression)
+    load_env
+    "$PYTHON" -m eval.regression
+    ;;
+  pilot)
+    "$PYTHON" scripts/pilot.py "$@"
+    ;;
+  needs)
+    "$PYTHON" scripts/needs.py "$@"
+    ;;
+  ingest)
+    "$PYTHON" scripts/ingest.py "$@"
+    ;;
+  objections)
+    "$PYTHON" scripts/objections.py "$@"
+    ;;
+  collab)
+    load_env
+    "$PYTHON" scripts/collab.py "$@"
+    ;;
+  audit)
+    load_env
+    "$PYTHON" scripts/audit.py "$@"
+    ;;
+  secrets)
+    load_env
+    "$PYTHON" -m agent_kit.secrets status
+    ;;
+  *)
+    cat >&2 <<'USAGE'
+Usage: ./helper COMMAND
+  setup                                  create .venv, copy the case's documents, check MODEL_API_KEY
+  test [--verification]                  offline tests (no API calls)
+  regression                             all offline benchmarks against frozen floors
+  audit RUN [--json]                     completeness of one run's record
+  secrets                                key sources + fingerprints (never values)
+  run [--turns N] [--resume RUN_ID]      run the agent, or continue a run
+  verify RUN_ID --memo | --checklist     run the verification checks on a finished run
+  branch RUN_ID                          continue a run from its checklist with verification on
+  review RUN_ID --approve | --reject --notes "..." | --answer R1 --notes "..."
+  quarantine --list | DOC-ID --release --notes "..."
+  artifact demo | gallery | open | show | check | revise | board | review | diff | export
+  pilot list | review MATTER ISSUE --approve|--request-changes --reviewer NAME --version V
+  needs RUN_ID                             per-issue evidence needs + status (JSON)
+  ingest --filename F (--text-file P | --b64-file P)
+  objections RUN_ID raise|disprove|restore (see --help)
+  collab RUN_ID show | draft-save | thread-open | ... (see scripts/collab.py)
+  reset [--clear-runs]                   reset the inbox to the case's documents
+  describe                               what the agent gets (JSON; used by the console)
+USAGE
+    exit 2
+    ;;
+esac

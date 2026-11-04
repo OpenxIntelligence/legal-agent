@@ -1,0 +1,41 @@
+// Browser-independent checks for draft isolation and exact-save clearing.
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+const source=readFileSync(new URL('../ui/workspace-state.js',import.meta.url),'utf8');
+const a='matter-'+ 'a'.repeat(32),b='matter-'+ 'b'.repeat(32);
+function storage(){const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),removeItem:key=>data.delete(key)};}
+function load(sessionStorage){const context={window:{sessionStorage}};vm.runInNewContext(source,context);return context.window.MatterWorkspaceStore;}
+const same=value=>JSON.parse(JSON.stringify(value));
+const shared=storage(),store=load(shared);
+assert.deepEqual(same(store.read(a)),{text:'',requestId:'',runId:'',pane:'findings'});
+assert.equal(store.storageAvailable,true);
+assert.equal(store.write(a,{text:'My unsent question',requestId:'REQ1',runId:'run-1',pane:'conversation'}),true);
+assert.equal(store.read(b).text,'');
+const copy=store.read(a);copy.text='mutated';assert.equal(store.read(a).text,'My unsent question');
+assert.equal(store.write(a,{pane:'findings'}),true);assert.equal(store.read(a).text,'My unsent question');
+assert.equal(store.clearReply(a,'old message'),false);assert.equal(store.read(a).requestId,'REQ1');
+assert.equal(store.clearReply(a,'My unsent question'),true);
+assert.deepEqual(same(store.read(a)),{text:'',requestId:'',runId:'',pane:'findings'});
+assert.equal(store.write(a,{text:'x'.repeat(12000)}),true);
+assert.equal(store.write(a,{text:'x'.repeat(12001)}),false);
+assert.equal(store.write(a,{requestId:'x'.repeat(129)}),false);
+assert.equal(store.write(a,{pane:'documents'}),false);
+assert.equal(store.write('../another-matter',{text:'no'}),false);
+assert.equal(store.write(a,[]),false);
+assert.equal(load(shared).read(a).text.length,12000);
+const broken=load({getItem(){throw Error('denied');},setItem(){throw Error('denied');},removeItem(){throw Error('denied');}});
+assert.equal(broken.storageAvailable,false);assert.equal(broken.write(a,{text:'Memory only',pane:'conversation'}),true);
+assert.equal(broken.read(a).text,'Memory only');assert.equal(broken.read(b).text,'');
+assert.equal(broken.clearReply(a,'wrong'),false);assert.equal(broken.clearReply(a,'Memory only'),true);
+assert.equal(broken.read(a).pane,'conversation');
+const flakyStorage=storage(),flaky=load(flakyStorage);
+flaky.write(a,{text:'Last known draft'});flakyStorage.getItem=()=>{throw Error('newly denied');};
+assert.equal(flaky.read(a).text,'Last known draft');assert.equal(flaky.storageAvailable,false);
+assert.equal(flaky.write(a,{text:'Still retained'}),true);assert.equal(flaky.read(a).text,'Still retained');
+const quotaStorage=storage(),quota=load(quotaStorage);assert.equal(quota.storageAvailable,true);
+quotaStorage.setItem=()=>{throw Error('quota exceeded');};
+assert.equal(quota.write(a,{text:'Retained despite quota'}),true);assert.equal(quota.storageAvailable,false);assert.equal(quota.read(a).text,'Retained despite quota');
+const corrupt=storage();corrupt.setItem('legal-agent.workspace.v1:'+a,'{invalid');
+assert.equal(load(corrupt).read(a).text,'');
+console.log('Workspace state checks passed: isolation, reload, validation, exact clearing, memory fallback.');

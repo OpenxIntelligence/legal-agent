@@ -1,0 +1,17 @@
+# ./helper setup installs these into agent/.venv.
+openai>=2.0,<3
+# Legal citation extraction (agent_kit/citations.py, Item 3).
+# reporters-db gets its own floor: its patterns data defines
+# what parses, so behavior pins to it, not just to eyecite.
+eyecite>=2.7,<3
+reporters-db>=3.2,<4
+# Bad-redaction scanning (agent_kit/redactions.py): rectangles
+# covering live text in inbox PDFs. Implemented on pdfplumber
+# (MIT) — X-Ray itself was evaluated and rejected because its
+# PyMuPDF dependency is AGPL.
+pdfplumber>=0.11,<0.12
+# Test-only: builds synthetic good/bad-redaction PDFs.
+reportlab>=5.1,<6
+# Render check for the redaction scanner (BSD/Apache-2.0):
+# confirms hidden text by rasterizing the rectangle region.
+pypdfium2>=5.14,<6

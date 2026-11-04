@@ -1,0 +1,23 @@
+# Local credentials and runtime state
+.env
+.env.*
+.legal-agent-env-*
+!.env.example
+*.pem
+*.key
+.venv/
+.local/
+.worktrees/
+.DS_Store
+__pycache__/
+*.pyc
+output/
+# Other local projects are not part of Legal Agent
+/open-intelligence/
+
+# Matter records, uploads, checkpoints, local settings, and editor state
+/agent/workspace/
+*.log
+.coverage
+.pytest_cache/
+node_modules/

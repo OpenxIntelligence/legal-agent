@@ -1576,9 +1576,9 @@ class AuthorityRegistryTest(unittest.TestCase):
 class NextActionTest(unittest.TestCase):
     """Ledger-aware next-action ranking (pure)."""
 
-    def test_empty_run_identifies_first(self) -> None:
+    def test_empty_run_acquires_sources_first(self) -> None:
         suggestions = reasoning.suggest_next_actions({})
-        self.assertEqual("identify_task", suggestions[0]["tool"])
+        self.assertEqual("search_public_sources", suggestions[0]["tool"])
 
     def test_chain_gaps_rank_in_order(self) -> None:
         data = {
@@ -1596,7 +1596,7 @@ class NextActionTest(unittest.TestCase):
         tools_ranked = [
             s["tool"] for s in reasoning.suggest_next_actions(data)
         ]
-        self.assertEqual("validate_decomposition", tools_ranked[0])
+        self.assertEqual("search_public_sources", tools_ranked[0])
         self.assertIn("triage_gap", tools_ranked)
 
     def test_stale_orchestration_comes_first(self) -> None:
@@ -1617,6 +1617,9 @@ class NextActionTest(unittest.TestCase):
     def test_complete_chain_suggests_filing(self) -> None:
         gate = IdentifiedGateTest()
         data = gate.chain()
+        data["facts"] = [{"id": "F1", "document_id": "D1", "quote": "Source text"}]
+        data["checklist"]["defects"]["status"] = "answered"
+        data["adversarial"][-1]["at"] = "2026-01-02"
         suggestions = reasoning.suggest_next_actions(data)
         self.assertEqual("submit_memo", suggestions[-1]["tool"])
 
@@ -1630,7 +1633,7 @@ class NextActionTest(unittest.TestCase):
             {"name": "suggest_next_action", "arguments": {},
              "call_id": "call-1"},
         )
-        self.assertEqual("identify_task", result["suggestions"][0]["tool"])
+        self.assertEqual("search_public_sources", result["suggestions"][0]["tool"])
 
 
 class OrchestrationSeamTest(unittest.TestCase):

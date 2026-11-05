@@ -18,6 +18,8 @@ model can correct it. A result carries "status" only when the run must stop:
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -65,6 +67,7 @@ from . import (
     sweep_issues,
     triage_gap,
     update_plan,
+    update_research_tree,
     validate_decomposition,
     work_status,
 )
@@ -72,6 +75,7 @@ from . import (
 BASE_TOOLS = [
     "set_checklist",
     "update_plan",
+    "update_research_tree",
     "list_documents",
     "analyze_document",
     "record_fact",
@@ -122,6 +126,7 @@ MODULES: dict[str, Any] = {
     for m in (
         set_checklist,
         update_plan,
+        update_research_tree,
         list_documents,
         analyze_document,
         record_fact,
@@ -228,21 +233,25 @@ def run(
     never recorded: transient failures must stay retryable, so tools
     must validate before committing.
     """
-    name, raw = _field(call, "name"), _field(call, "arguments") or "{}"
+    from ..argument_validation import ArgumentError, parse, validate
+
+    name, raw = _field(call, "name"), _field(call, "arguments")
     try:
-        args = json.loads(raw) if isinstance(raw, str) else dict(raw)
-    except (TypeError, ValueError) as error:
-        return {"error": f"tool arguments are not valid JSON: {error}"}
-    if not isinstance(args, dict):
-        return {"error": "tool arguments must be a JSON object"}
+        args = parse(raw)
+    except ArgumentError as error:
+        return error.result()
     root = Path(root)
+    verification = bool(load_progress(root, run_id).get("verification"))
+    if name not in names(verification):
+        return {"error": f"unknown tool: {name!r}"}
     if op_seq is not None:
         recorded = _pending_result(root, run_id, op_seq, name, args)
         if recorded is not None:
             return recorded
-    verification = bool(load_progress(root, run_id).get("verification"))
-    if name not in names(verification):
-        return {"error": f"unknown tool: {name!r}"}
+    try:
+        validate(args, MODULES[name].DEFINITION.get("parameters", {}), tool=name)
+    except ArgumentError as error:
+        return error.result()
     ctx = Context(client, root, run_id, CaseRecord(root, run_id), verification)
     try:
         result = MODULES[name].run(ctx, args)
@@ -257,7 +266,12 @@ def run(
 
 
 def _pending_path(root: Path, run_id: str) -> Path:
-    return Path(root) / "workspace" / "runs" / run_id / "pending_op.json"
+    from ..runtime_ownership import CheckpointError, run_folder
+
+    path = run_folder(root, run_id) / "pending_op.json"
+    if path.is_symlink():
+        raise CheckpointError("Pending operation must not be a symlink.")
+    return path
 
 
 def pending_op_path(root: Path, run_id: str) -> Path:
@@ -276,12 +290,24 @@ def _pending_result(
     root: Path, run_id: str, op_seq: int, name: str, args: dict
 ) -> dict | None:
     """The recorded result when this exact call already committed, else None."""
+    from ..runtime_ownership import CheckpointError
+
+    _validate_operation_seq(op_seq)
+    path = _pending_path(root, run_id)
     try:
-        slot = json.loads(_pending_path(root, run_id).read_text())
-    except (OSError, ValueError):
+        slot = json.loads(path.read_text())
+    except FileNotFoundError:
         return None
-    if not isinstance(slot, dict):
-        return None
+    except (OSError, ValueError, UnicodeError) as error:
+        raise CheckpointError("Pending operation is unreadable; refusing to replay it.") from error
+    if (not isinstance(slot, dict) or
+            ("run_id" in slot and slot["run_id"] != run_id) or
+            isinstance(slot.get("seq"), bool) or not isinstance(slot.get("seq"), int) or slot["seq"] <= 0 or
+            not isinstance(slot.get("name"), str) or not isinstance(slot.get("args"), str) or
+            not isinstance(slot.get("result"), dict)):
+        raise CheckpointError("Pending operation has invalid identity or structure.")
+    if slot["seq"] == op_seq and (slot["name"] != name or slot["args"] != _stable_args(args)):
+        raise CheckpointError("Pending operation conflicts with this call at the same sequence.")
     if (
         slot.get("seq") == op_seq
         and slot.get("name") == name
@@ -301,20 +327,28 @@ def _record_pending(
     conversation checkpoint has not absorbed yet, so no clearing pass
     is needed and a crash between writes cannot confuse recovery.
     """
+    _validate_operation_seq(op_seq)
     path = _pending_path(root, run_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(
-        json.dumps(
-            {
-                "seq": op_seq,
-                "name": name,
-                "args": _stable_args(args),
-                "result": result,
-            }
-        )
-    )
-    tmp.replace(path)
+    payload = json.dumps({"run_id": run_id, "seq": op_seq, "name": name,
+                          "args": _stable_args(args), "result": result}, allow_nan=False)
+    fd, temporary = tempfile.mkstemp(prefix=".pending-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _validate_operation_seq(op_seq: int) -> None:
+    from ..runtime_ownership import CheckpointError
+
+    if isinstance(op_seq, bool) or not isinstance(op_seq, int) or op_seq <= 0:
+        raise CheckpointError("Operation sequence must be a positive integer.")
 
 
 def _field(call: Any, key: str) -> Any:

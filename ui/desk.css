@@ -296,3 +296,20 @@
   #matterDesk .queue-list{max-height:90px}
   #matterDesk #matterReplyForm{flex-shrink:0}
 }
+
+#matterDesk .research-tree{border:1px solid var(--line);border-radius:7px;padding:12px;margin:14px 0;overflow-wrap:anywhere}
+#matterDesk .research-tree>summary{font-weight:650;cursor:pointer}
+#matterDesk .research-tree>summary>span{font-weight:400;font-size:11px;margin-left:10px;color:var(--muted)}
+#matterDesk .research-tree ul{list-style:none;margin:10px 0 0;padding-left:14px;border-left:1px solid var(--line)}
+#matterDesk .research-tree>ul{padding-left:0;border-left:0}
+#matterDesk .research-tree li{margin:9px 0}
+#matterDesk .research-tree li>details>summary{cursor:pointer;font-size:13px;line-height:1.6}
+#matterDesk .research-question{font-weight:600}
+#matterDesk .research-status{display:inline-block;font-size:10px;border:1px solid var(--line);border-radius:4px;padding:0 6px;margin-left:8px;color:var(--muted)}
+#matterDesk .research-status[data-status="stale"],#matterDesk .research-status[data-status="blocked"],#matterDesk .research-status[data-status="mixed"]{color:#805f24;background:#faf5e9}
+#matterDesk .research-node-body{padding-left:14px}
+#matterDesk .research-node-body p{font-size:12px;line-height:1.6;margin:7px 0}
+#matterDesk .research-references{font-size:11px;color:var(--muted);margin:8px 0}
+#matterDesk .research-references summary{cursor:pointer}
+#matterDesk .research-references>div{margin-top:8px}
+@media(max-width:600px){#matterDesk .research-tree{padding:9px}#matterDesk .research-tree ul,#matterDesk .research-node-body{padding-left:8px}}

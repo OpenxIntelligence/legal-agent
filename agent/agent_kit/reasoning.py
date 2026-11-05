@@ -2254,6 +2254,7 @@ TOOL_ACTION_CLASSES = {
     "suggest_next_action": "research",
     "set_checklist": "draft",
     "update_plan": "draft",
+    "update_research_tree": "draft",
     "record_fact": "draft",
     "record_facts": "draft",
     "note_context": "draft",
@@ -2515,6 +2516,46 @@ def _check_withdrawn_quotes(data: dict, memo: dict) -> list[str]:
 # questions, uncovered plans, untriaged gaps, adversarial review,
 # and finally filing. Pure function; the tool reports, never acts.
 
+def investigation_ready(case_data: dict) -> bool:
+    """Conservative synthesis signal; the actual filing checks still apply.
+
+    Bookkeeping alone is not completion. Require source-backed findings,
+    resolved research coverage, and a current evidence challenge. Closing a
+    blocked query is legitimate but its limitations belong in the memo.
+    """
+    data = case_data if isinstance(case_data, dict) else {}
+    withdrawn = {f.get("id") if isinstance(f, dict) else f
+                 for f in (data.get("withdrawn_facts") or [])
+                 if isinstance(f, (dict, str))}
+    facts = [f for f in (data.get("facts") or []) if isinstance(f, dict)
+             and not f.get("withdrawn") and f.get("id") not in withdrawn]
+    if not any(f.get("document_id") and f.get("quote") for f in facts):
+        return False
+    if any(isinstance(q, dict) and q.get("status") == "open"
+           for q in (data.get("queries") or [])):
+        return False
+    tree = data.get("research_tree") or {}
+    from .research_tree import effective_status
+    if isinstance(tree, dict) and any(isinstance(n, dict) and effective_status(data, n) in ("open", "stale")
+                                     for n in tree.values()):
+        return False
+    orch = data.get("orchestration") or {}
+    if any(isinstance(c, dict) and c.get("status") == "open"
+           for c in (orch.get("contradictions") or [])):
+        return False
+    if any(isinstance(q, dict) and q.get("status") == "stale"
+           for q in (orch.get("questions") or {}).values()):
+        return False
+    if any(not isinstance(e, dict) or e.get("status") not in ("answered", "escalated")
+           for e in (data.get("checklist") or {}).values()):
+        return False
+    reviews = [r for r in (data.get("adversarial") or []) if isinstance(r, dict)]
+    if not reviews:
+        return False
+    latest = str(reviews[-1].get("at", "") or "")
+    return bool(latest) and not any(str(f.get("at", "") or "") > latest for f in facts)
+
+
 def suggest_next_actions(case_data: dict, limit: int = 5) -> list[dict]:
     """Ranked next actions from recorded state, most urgent first."""
     data = case_data if isinstance(case_data, dict) else {}
@@ -2531,7 +2572,7 @@ def suggest_next_actions(case_data: dict, limit: int = 5) -> list[dict]:
             continue
         if question.get("status") == "stale" and question.get("issue"):
             add(
-                "analyze_document",
+                "plan_research",
                 str(question["issue"]),
                 f"orchestrated question {qid} went stale after "
                 "invalidation: re-run the affected analysis, then "
@@ -2559,6 +2600,60 @@ def suggest_next_actions(case_data: dict, limit: int = 5) -> list[dict]:
             f"open contradiction {cid} touches {issue or about or 'an issue'}: "
             "investigate the conflict, then integrate or disclose it",
         )
+    # Inspect retrieved evidence before administrative planning. This is a
+    # recommendation, never an assertion that a source is relevant or current.
+    public = data.get("public_sources") or {}
+    public = public if isinstance(public, dict) else {}
+    read_ids = data.get("read_ids") or []
+    facts = [f for f in (data.get("facts") or []) if isinstance(f, dict)]
+    for doc_id in sorted(public):
+        if doc_id not in read_ids:
+            add("analyze_document", doc_id,
+                "retrieved primary source needs inspection: test relevance and "
+                "extract exact passages before concluding")
+    fetched_urls = {v.get("url") for v in public.values() if isinstance(v, dict)}
+    requests = data.get("public_research_requests") or {}
+    searches = [v for v in (data.get("public_research_searches") or []) if isinstance(v, dict)]
+    open_queries = [q for q in (data.get("queries") or [])
+                    if isinstance(q, dict) and q.get("status") == "open"]
+    if requests.get("fetch", 0) < 12 and (not facts or open_queries):
+        for search in searches:
+            for result in search.get("results") or []:
+                if isinstance(result, dict) and result.get("url") and result["url"] not in fetched_urls:
+                    add("fetch_public_source", result["url"],
+                        "candidate official publication: inspect whether it answers "
+                        "the question; search snippets are not evidence")
+                    break
+    for query in (data.get("queries") or []):
+        if not isinstance(query, dict) or query.get("status") != "open":
+            continue
+        add("resolve_query", str(query.get("id", "")),
+            f"open research question: {query.get('target', '')}. Pursue the next "
+            "relevant source if still unanswered, then record the supported answer "
+            "and coverage. Close blocked routes honestly rather than retrying forever")
+    if not facts and not public and not read_ids and not searches:
+        if requests.get("search", 0) < 6:
+            add("search_public_sources", "",
+                "no source-backed baseline: retrieve public sources before intake forms. "
+                "Use short non-private terms from the actual question. This tool covers "
+                "Federal Register notices/rules only; for statutes, caselaw or another "
+                "jurisdiction instead fetch a known relevant official section URL. "
+                "Uploads are optional; a zero-result notice search does not establish no law")
+        else:
+            add("plan_research", "", "bounded notice search is exhausted: choose a "
+                "different official source route or disclose the access/coverage limitation")
+    tree = data.get("research_tree") or {}
+    if isinstance(tree, dict):
+        from .research_tree import effective_status
+        for node_id, node in sorted(tree.items()):
+            if isinstance(node, dict) and effective_status(data, node) in ("open", "stale"):
+                add("update_research_tree", str(node_id),
+                    f"unassessed research alternative: {node.get('question', '')}. "
+                    f"Next source/action: {node.get('next_action', '')}. Investigate, "
+                    "then record the evidence-linked assessment or a bounded limitation")
+    if public and read_ids and not facts:
+        add("record_fact", "", "inspection has produced no recorded evidence: record "
+            "relevant verified passages, or disclose irrelevance and choose another source")
     if not identified_mode(data):
         add(
             "identify_task",
@@ -2569,13 +2664,6 @@ def suggest_next_actions(case_data: dict, limit: int = 5) -> list[dict]:
     decompositions = [
         d for d in (data.get("decompositions") or []) if isinstance(d, dict)
     ]
-    if not decompositions or decompositions[-1].get("verdict") != "pass":
-        add(
-            "validate_decomposition",
-            "",
-            "no passing decomposition: validate the question set "
-            "before investigating",
-        )
     answers = [a for a in (data.get("foundational") or []) if isinstance(a, dict)]
     planned = (
         decompositions[-1].get("questions", [])
@@ -2650,18 +2738,20 @@ def suggest_next_actions(case_data: dict, limit: int = 5) -> list[dict]:
             citation = str(entry.get("citation", "") or "")
             if entry.get("verification") in ("unverified", "provisional"):
                 add(
-                    "search_corpus",
-                    str(aid),
+                    "analyze_document" if entry.get("document_id") else "plan_research",
+                    str(entry.get("document_id") or aid),
                     f"authority {aid} is {entry.get('verification')}: verify "
                     f"{citation or 'the citation'} supports the relied-upon "
                     "proposition",
                 )
             elif entry.get("treatment_checked") is not True:
                 add(
-                    "search_corpus",
+                    "plan_research",
                     str(aid),
-                    f"authority {aid} has no subsequent-treatment check: "
-                    f"confirm {citation or 'the citation'} remains good law",
+                    f"authority {aid} has no subsequent-treatment check: seek "
+                    f"current primary-source treatment of {citation or 'the citation'}. "
+                    "An inbox keyword search alone cannot confirm good law; disclose "
+                    "the limitation if authoritative treatment is inaccessible",
                 )
             elif str(aid) not in relied:
                 add(
@@ -2689,17 +2779,21 @@ def suggest_next_actions(case_data: dict, limit: int = 5) -> list[dict]:
                 "",
                 "evidence arrived after the latest challenge: re-review",
             )
-    workflow = (data.get("workflow") or {}).get("components") or []
-    if not workflow:
-        add("plan_workflow", "", "no workflow plan recorded")
     if not data.get("work_product"):
         add("declare_work_product", "", "no work product declared")
-    if len(suggestions) < 2:
+    if not suggestions and investigation_ready(data):
         add(
             "submit_memo",
             "",
-            "chain complete: file the memo or review a draft first",
+            "source-backed work is ready for synthesis: disclose application gaps "
+            "and coverage limits; filing checks still apply",
         )
+    if not suggestions:
+        add("plan_research", "", "identify the remaining evidence or answer-coverage "
+            "gap; choose another source or record a bounded research limitation")
+    if not investigation_ready(data) and (not decompositions or decompositions[-1].get("verdict") != "pass"):
+        add("validate_decomposition", "", "consider testable alternatives for a complex "
+            "question; this is not a prerequisite to source acquisition")
     return suggestions[:limit]
 
 

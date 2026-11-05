@@ -530,6 +530,17 @@ await step('live Enter saves before dispatch and surfaces provider failure witho
     ensure(!detail.messages.some(message=>['model','agent'].includes(message.kind)),'job acknowledgment invented an agent answer');
   }finally{await evaluate(`window.fetch=window.__liveSendOriginal`);}
 });
+await step('busy steering hints and unconfirmed message saves remain honest and actionable',async()=>{
+  const created=await(await fetch(`${base}/api/matters`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Fictional save-response failure fixture.'})})).json(),id=created.id;
+  await evaluate(`window.__saveFailureOriginal=window.fetch;window.__saveFailurePosts=0;window.fetch=async function(url,opts){const path=new URL(String(url),location.href).pathname;if(opts?.method==='POST'&&path==='/api/matters/${id}/messages'){window.__saveFailurePosts++;return new Response(JSON.stringify({error:'Fictional storage response unavailable'}),{status:503});}const response=await window.__saveFailureOriginal.apply(this,arguments);if(!opts?.method&&path==='/api/matters/${id}'){const body=await response.json();body.demo=false;body.can_run=true;body.api_key_configured=true;body.jobs=[{id:'synthetic-active-job',running:true}];return new Response(JSON.stringify(body),{status:200});}return response;};location.hash='#/matter/${id}';`);
+  try{
+    await waitFor(()=>evaluate(`document.querySelector('#matterSwitcher')?.value==='${id}'&&document.querySelector('#sendMatterMessage')?.textContent==='Steer agent'`),10000,'busy steering composer');
+    ensure(await evaluate(`document.querySelector('#matterReplyHint').textContent.includes('next safe boundary')&&!document.querySelector('#matterReplyHint').textContent.includes('next resume')`),'Steer composer falsely promises Queue delivery');
+    const draft='Fictional direction retained after a failed save response.';await typeDraft(draft);await visibleClick('#sendMatterMessage');
+    await waitFor(()=>evaluate(`document.querySelector('#matterReplyStatus').getAttribute('role')==='alert'&&document.querySelector('#matterReplyStatus').textContent.includes('save could not be confirmed')`),10000,'actionable unconfirmed save');
+    ensure(await evaluate(`document.querySelector('#matterReply').value===${JSON.stringify(draft)}&&document.querySelector('#matterReplyStatus').textContent.includes('before retrying')&&!document.querySelector('#matterConversation').textContent.includes('Fictional storage response unavailable')&&window.__saveFailurePosts===1`),'failure lost draft, invented agent response or auto-retried');
+  }finally{await evaluate(`window.fetch=window.__saveFailureOriginal`);}
+});
 await step('missing model connection saves context; failed startup stays actionable',async()=>{
   const created=await(await fetch(`${base}/api/matters`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:'Fictional missing connection and failed startup fixture.'})})).json(),id=created.id;
   await evaluate(`window.__guardOriginal=window.fetch;window.__guardConnected=false;window.__guardStarts=0;window.fetch=async function(url,opts){const path=new URL(String(url),location.href).pathname;if(opts?.method==='POST'&&(path.endsWith('/start')||path.endsWith('/resume'))){window.__guardStarts++;return new Response(JSON.stringify({id:'failed-start-fixture',running:false,returncode:99}),{status:200});}const response=await window.__guardOriginal.apply(this,arguments);if(!opts?.method&&path==='/api/matters/${id}'){const body=await response.json();body.demo=false;body.api_key_configured=window.__guardConnected;body.can_run=window.__guardConnected;body.jobs=window.__guardStarts?[{id:'failed-start-fixture',running:false,returncode:99}]:[];return new Response(JSON.stringify(body),{status:200});}return response;};location.hash='#/matter/${id}';`);
@@ -632,6 +643,8 @@ await step('investigation rail follows recorded plans, requests, gaps and safe s
   const root=`${fixtureRoot}/workspace/matters/${matterId}`,run='run-zz-history-fixture';
   const file=`${root}/workspace/case_records/${run}.json`,original=readFileSync(file,'utf8'),record=JSON.parse(original);
   record.plan={revision:2,steps:['Check the agency notice rule first.']};
+  record.facts=[...(record.facts||[]),{id:'F_TREE',item:'notice',document_id:'public-fixture',page:1,quote:'Fictional authority excerpt.'}];
+  record.research_tree={notice:{id:'notice',question:'Does the notice rule apply?',status:'supported',summary:'Fictional assessment still needs country context.',evidence_ids:['F_TREE'],next_action:'Identify the country designation.'},timing:{id:'timing',parent:'notice',question:'Was a notice published on time?',hypothesis:'The publication timing may change the result.',status:'blocked',summary:'The date is missing.',evidence_ids:[],next_action:'Find the official publication date.'}};
   record.checklist={agency_notice:{question:'Did the agency issue a timely notice?',evidence_needed:'The current statute and designated-country notice.',status:'open'}};
   record.requests=[{id:'request-adaptive',need:'Which country designation and November year?',item:'agency_notice',status:'open'}];
   record.memo={conclusion:'Fictional research draft',findings:[{item:'agency_notice',summary:'A fictional finding.',citations:[{document_id:'public-fixture',page:1,quote:'Fictional authority excerpt.'}]}],gaps:'Identify the designation and year; then compare the official notice dates.'};
@@ -642,6 +655,10 @@ await step('investigation rail follows recorded plans, requests, gaps and safe s
     await evaluate(`location.hash='#/matter/${matterId}?run=${run}'`);await reloadPage();
     await waitFor(()=>evaluate(`document.querySelector('#matterRail')?.textContent.includes('Check the agency notice rule first.')`),15000,'run-backed agent plan');
     ensure(await evaluate(`document.querySelector('#matterRail').textContent.includes('Did the agency issue a timely notice?')`),'actual issue question absent');
+    ensure(await evaluate(`document.querySelector('.research-tree [data-research-node="notice"] [data-research-node="timing"]')&&document.querySelector('.research-tree').textContent.includes('2 branches · 1 unresolved')&&document.querySelector('.research-tree').textContent.includes('unverified')&&document.querySelector('[data-research-node="notice"] [data-status="supported"]')`),'research tree hierarchy, status or assessment caveat missing');
+    await evaluate(`document.querySelector('.research-references').open=true`);
+    ensure(await evaluate(`document.querySelector('.research-references').textContent.includes('F_TREE')&&document.querySelector('.research-references .matter-citation')`),'research evidence references absent');
+    await evaluate(`document.querySelector('[data-research-node="notice"]').open=false`);
     ensure(!await evaluate(`document.querySelector('#matterRail').textContent.includes('Initial intake checklist')`),'static intake shown as current plan');
     ensure(await evaluate(`document.querySelector('#matterResults').textContent.includes('Identify the designation and year; then compare the official notice dates.')`),'string memo gaps silently lost');
     ensure(await evaluate(`document.querySelector('#matterRail a[href="https://www.uscis.gov/humanitarian/temporary-protected-status"]') && document.querySelector('.matter-citation a[href="https://www.uscis.gov/humanitarian/temporary-protected-status"]')`),'original source provenance not linked in rail and citation');
@@ -658,6 +675,12 @@ await step('investigation rail follows recorded plans, requests, gaps and safe s
     await evaluate(`MatterUI.refresh()`);
     await waitFor(()=>evaluate(`document.querySelector('#matterRail')?.textContent.includes('Compare the official notice publication dates.')`),10000,'updated actual plan');
     ensure(await evaluate(`document.querySelector('[data-rail-section="context"]').open && !document.querySelector('#matterRail').textContent.includes('Check the agency notice rule first.')`),'polling reset disclosure or retained stale plan');
+    ensure(await evaluate(`!document.querySelector('[data-research-node="notice"]').open`),'polling expanded a collapsed research branch');
+    const evidence=record.facts.find(f=>f.id==='F_TREE');record.facts=record.facts.filter(f=>f.id!=='F_TREE');record.withdrawn_facts=[...(record.withdrawn_facts||[]),evidence];writeFileSync(file,JSON.stringify(record));
+    await evaluate(`MatterUI.refresh()`);
+    await waitFor(()=>evaluate(`document.querySelector('[data-research-node="notice"] [data-status="stale"]')?.textContent==='stale · evidence changed'`),10000,'withdrawal invalidates recorded research assessment');
+    ensure(await evaluate(`document.querySelector('.research-tree').textContent.includes('2 branches · 2 unresolved')&&document.querySelector('[data-research-node="notice"]').textContent.includes('Recorded assessment: supported.')&&document.querySelector('[data-research-node="notice"]').textContent.includes('Fictional assessment still needs country context.')&&document.querySelector('.research-references').textContent.includes('evidence unavailable or withdrawn')&&!document.querySelector('.research-references .matter-citation')`),'stale branch lost original assessment, unresolved count or evidence warning');
+    ensure(JSON.parse(readFileSync(file,'utf8')).research_tree.notice.status==='supported','UI mutated recorded research assessment');
     await shot('adaptive-investigation-rail');
   }finally{writeFileSync(file,original);}
 });

@@ -11,9 +11,9 @@ Semantics:
 - HALT (budget exhausted): the only recommendation is to
   escalate — `request_approval` so a human decides whether to
   extend the budget. No investigation action is suggested.
-- INVESTIGATION COMPLETE: the underlying policy's only
-  suggestion is filing the memo, meaning no further
-  investigation is justified. Filing itself still passes
+- INVESTIGATION COMPLETE: source-backed findings have resolved coverage,
+  no open research obligations remain, a current challenge is recorded,
+  and the underlying policy suggests only filing. Filing itself still passes
   through the gates; the policy never approves work.
 - Otherwise: the ranked investigation actions pass through
   unchanged.
@@ -26,7 +26,7 @@ only ranks what to do next.
 
 from __future__ import annotations
 
-from .reasoning import suggest_next_actions
+from .reasoning import investigation_ready, suggest_next_actions
 
 BUDGET_KEYS = ("max_calls", "max_input_tokens", "max_output_tokens")
 USAGE_KEYS = {"max_calls": "calls", "max_input_tokens": "input_tokens",
@@ -71,7 +71,8 @@ def recommend(
             }
     actions = suggest_next_actions(case_data, limit=limit)
     complete = (
-        len(actions) == 1 and actions[0].get("tool") == "submit_memo"
+        investigation_ready(case_data)
+        and len(actions) == 1 and actions[0].get("tool") == "submit_memo"
     )
     return {
         "halt": False,

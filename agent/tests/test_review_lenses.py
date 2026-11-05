@@ -68,7 +68,8 @@ class ReviewLensTest(unittest.TestCase):
         result = self.call("adversarial_review", _review(lens="evidence"))
         self.assertEqual("AR1", result["reviewed"])
         bad = self.call("adversarial_review", _review(lens="nope"))
-        self.assertIn("unknown review lens", bad["error"])
+        self.assertEqual("invalid_tool_arguments", bad["code"])
+        self.assertEqual("arguments.lens", bad["field"])
 
     def test_tool_result_shape_unchanged_without_lens(self) -> None:
         result = self.call("adversarial_review", _review())

@@ -36,6 +36,8 @@ Runner ownership survives server restarts. When an interrupted run offers **Reco
 
 ## Research and analysis
 
+Complex investigations can maintain an evidence-linked research tree: issue branches, competing hypotheses, recorded assessments, blockers and next actions. The controller periodically checks recorded evidence progress and prompts a change of approach before repeated actions stall. Planning edits alone do not count as evidence progress. These checkpoints summarize observable work; they do not expose private model reasoning or independently verify a legal conclusion.
+
 An investigation can begin without uploads. The agent can plan research, search Federal Register documents, retrieve supported public primary-source pages, and save extracted passages into the same evidence pipeline as uploaded records. Search coverage is limited: Federal Register search is not a general web or complete caselaw search. A failed search never establishes that no relevant law or notice exists.
 
 Retrieved sources retain their original URL, retrieval time and content hash. Findings link to saved passages for inspection. Retrieval does not establish that an authority is current, controlling, or legally applicable; informational Federal Register pages require checking the official publication. The agent should distinguish a supported general rule from facts still needed to apply it to a particular matter.

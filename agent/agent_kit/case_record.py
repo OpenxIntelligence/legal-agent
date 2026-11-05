@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 from typing import Any
@@ -2719,6 +2720,17 @@ class CaseRecord:
         LeaseBusy; an expired one is superseded (fencing: the old
         token never validates again). The token is monotonic per case.
         """
+        if isinstance(reservation, bool) or not isinstance(reservation, int) or reservation < 0:
+            raise LeaseError("reservation must be a non-negative integer")
+        if not isinstance(worker, str) or not worker.strip():
+            raise LeaseError("worker must be a non-empty string")
+        if not isinstance(versions, dict):
+            raise LeaseError("versions must be an object")
+        for label, value in (("ttl", ttl), ("epoch_now", epoch_now)):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise LeaseError(f"{label} must be a finite number")
+        if ttl <= 0 or epoch_now < 0 or not math.isfinite(epoch_now + ttl):
+            raise LeaseError("lease lifetime must be positive and finite")
         task = self.task(task_id)
         if task.get("status") not in ("open", "stale"):
             raise LeaseError(
@@ -2752,6 +2764,8 @@ class CaseRecord:
 
     def release_lease(self, task_id: str, token: int) -> dict | None:
         """Release a lease by token. A mismatched token is stale, never released."""
+        if isinstance(token, bool) or not isinstance(token, int) or token <= 0:
+            raise StaleLease("lease token must be a positive integer")
         task = self.task(task_id)
         current = task.get("lease")
         if not isinstance(current, dict) or current.get("token") != token:

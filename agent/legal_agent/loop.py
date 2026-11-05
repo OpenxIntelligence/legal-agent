@@ -30,6 +30,7 @@ from agent_kit.progress import (
     tokens_spent,
 )
 from agent_kit.scheduler import attempt_outcome
+from .research_control import evidence_signature, checkpoint, feedback
 
 STALL_REPEATS = 3
 
@@ -196,10 +197,17 @@ def _run_turns(
     repeats = 0
     budget = settings.run_token_budget()
     context_cap = settings.max_context_bytes()
+    previous_evidence = evidence_signature(CaseRecord(root, run_id).data)
+    stagnant = 0
     for index in range(turns):
         # A completed model/tool pair is the safe steering boundary. Queue
         # delivery waits for resume; steering enters before the next model call.
         messages.extend(message_queue.deliver(root, run_id, messages))
+        if index and (index % 6 == 0 or repeats == 2 or stagnant == 4):
+            messages.append(feedback(checkpoint(
+                CaseRecord(root, run_id).data, stagnant=stagnant,
+                repeated=repeats == 2,
+            )))
         # Enforcement boundary: the budget is checked between turns, before the
         # next model call — not before the tool/verify calls inside a turn.
         # A turn already in flight can therefore overshoot the budget by up to
@@ -359,6 +367,9 @@ def _run_turns(
             + 1
         )
         result = tools.run(client, root, run_id, call, op_seq=op_seq)
+        current_evidence = evidence_signature(CaseRecord(root, run_id).data)
+        stagnant = stagnant + 1 if current_evidence == previous_evidence else 0
+        previous_evidence = current_evidence
         call_id = call.get("call_id") if isinstance(call, dict) else getattr(call, "call_id", None)
         messages.append(
             {

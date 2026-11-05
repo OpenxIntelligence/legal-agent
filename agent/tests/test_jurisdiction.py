@@ -540,7 +540,8 @@ class QueryJournalTest(JurisdictionCase):
         error = self.plan(outcome="answered", summary="")
         self.assertIn("summary", error["error"])
         error = self.plan(query_class="divination")
-        self.assertIn("query class", error["error"])
+        self.assertEqual("invalid_tool_arguments", error["code"])
+        self.assertEqual("arguments.query_class", error["field"])
         error = self.plan(
             query_class="rule_exception", branch="B9"
         )

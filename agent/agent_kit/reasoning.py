@@ -2255,6 +2255,7 @@ TOOL_ACTION_CLASSES = {
     "set_checklist": "draft",
     "update_plan": "draft",
     "update_research_tree": "draft",
+    "update_task_understanding": "draft",
     "record_fact": "draft",
     "record_facts": "draft",
     "note_context": "draft",
@@ -2524,6 +2525,9 @@ def investigation_ready(case_data: dict) -> bool:
     blocked query is legitimate but its limitations belong in the memo.
     """
     data = case_data if isinstance(case_data, dict) else {}
+    interpretation = data.get('task_understanding')
+    if isinstance(interpretation, dict) and interpretation.get('stale'):
+        return False
     withdrawn = {f.get("id") if isinstance(f, dict) else f
                  for f in (data.get("withdrawn_facts") or [])
                  if isinstance(f, (dict, str))}

@@ -643,6 +643,7 @@ await step('investigation rail follows recorded plans, requests, gaps and safe s
   const root=`${fixtureRoot}/workspace/matters/${matterId}`,run='run-zz-history-fixture';
   const file=`${root}/workspace/case_records/${run}.json`,original=readFileSync(file,'utf8'),record=JSON.parse(original);
   record.plan={revision:2,steps:['Check the agency notice rule first.']};
+  record.task_understanding={actor:'The agency, not the individual applicant',event:'Agency designation review and notice publication',interpretation:'Distinguish an agency notice deadline from an individual re-registration deadline.',intended_outcome:'Explain the consequence of agency inaction with governing sources.',success_criteria:['Identify the actor and the legal deadline.'],assumptions:['The user refers to agency inaction.'],alternatives:[{interpretation:'The individual missed a registration deadline.',material:true,next_action:'Ask which actor and deadline the user means.'}],version:2,revision_reason:'The user clarified agency inaction.',original_request:'Why did the agency not act? <img src=x onerror="window.__taskXss=true">',stale:false};
   record.facts=[...(record.facts||[]),{id:'F_TREE',item:'notice',document_id:'public-fixture',page:1,quote:'Fictional authority excerpt.'}];
   record.research_tree={notice:{id:'notice',question:'Does the notice rule apply?',status:'supported',summary:'Fictional assessment still needs country context.',evidence_ids:['F_TREE'],next_action:'Identify the country designation.'},timing:{id:'timing',parent:'notice',question:'Was a notice published on time?',hypothesis:'The publication timing may change the result.',status:'blocked',summary:'The date is missing.',evidence_ids:[],next_action:'Find the official publication date.'}};
   record.checklist={agency_notice:{question:'Did the agency issue a timely notice?',evidence_needed:'The current statute and designated-country notice.',status:'open'}};
@@ -655,6 +656,9 @@ await step('investigation rail follows recorded plans, requests, gaps and safe s
     await evaluate(`location.hash='#/matter/${matterId}?run=${run}'`);await reloadPage();
     await waitFor(()=>evaluate(`document.querySelector('#matterRail')?.textContent.includes('Check the agency notice rule first.')`),15000,'run-backed agent plan');
     ensure(await evaluate(`document.querySelector('#matterRail').textContent.includes('Did the agency issue a timely notice?')`),'actual issue question absent');
+    ensure(await evaluate(`document.querySelector('.task-understanding').textContent.includes('The agency, not the individual applicant')&&document.querySelector('.task-understanding').textContent.includes('Agency designation review and notice publication')&&document.querySelector('.task-understanding').textContent.includes('not user confirmation')&&document.querySelector('.task-understanding').textContent.includes('Material alternative')`),'task framing lost actor/event or interpretation boundary');
+    ensure(await evaluate(`document.querySelector('.task-original').textContent.includes('<img src=x onerror=')&&!document.querySelector('.task-understanding img')&&!window.__taskXss`),'original request was interpreted as HTML');
+    await evaluate(`document.querySelector('[data-research-node="__task_alternatives"]').open=true;document.querySelector('[data-research-node="__task_original"]').open=true`);
     ensure(await evaluate(`document.querySelector('.research-tree [data-research-node="notice"] [data-research-node="timing"]')&&document.querySelector('.research-tree').textContent.includes('2 branches · 1 unresolved')&&document.querySelector('.research-tree').textContent.includes('unverified')&&document.querySelector('[data-research-node="notice"] [data-status="supported"]')`),'research tree hierarchy, status or assessment caveat missing');
     await evaluate(`document.querySelector('.research-references').open=true`);
     ensure(await evaluate(`document.querySelector('.research-references').textContent.includes('F_TREE')&&document.querySelector('.research-references .matter-citation')`),'research evidence references absent');
@@ -671,11 +675,12 @@ await step('investigation rail follows recorded plans, requests, gaps and safe s
       ensure(await evaluate(`document.querySelector('#matterRail').textContent.includes('New documents are waiting for a new investigation.') && !document.querySelector('#matterRequest')`),'new documents silently targeted an obsolete run request');
     }
     await evaluate(`document.querySelector('[data-rail-section="context"]').open=true`);
-    record.plan={revision:3,steps:['Compare the official notice publication dates.']};writeFileSync(file,JSON.stringify(record));
+    record.plan={revision:3,steps:['Compare the official notice publication dates.']};record.task_understanding.stale=true;writeFileSync(file,JSON.stringify(record));
     await evaluate(`MatterUI.refresh()`);
     await waitFor(()=>evaluate(`document.querySelector('#matterRail')?.textContent.includes('Compare the official notice publication dates.')`),10000,'updated actual plan');
     ensure(await evaluate(`document.querySelector('[data-rail-section="context"]').open && !document.querySelector('#matterRail').textContent.includes('Check the agency notice rule first.')`),'polling reset disclosure or retained stale plan');
     ensure(await evaluate(`!document.querySelector('[data-research-node="notice"]').open`),'polling expanded a collapsed research branch');
+    ensure(await evaluate(`document.querySelector('.task-stale').textContent.includes('needs reassessment')&&document.querySelector('[data-research-node="__task_original"]').open&&document.querySelector('[data-research-node="__task_alternatives"]').open`),'stale task interpretation or stable disclosures missing');
     const evidence=record.facts.find(f=>f.id==='F_TREE');record.facts=record.facts.filter(f=>f.id!=='F_TREE');record.withdrawn_facts=[...(record.withdrawn_facts||[]),evidence];writeFileSync(file,JSON.stringify(record));
     await evaluate(`MatterUI.refresh()`);
     await waitFor(()=>evaluate(`document.querySelector('[data-research-node="notice"] [data-status="stale"]')?.textContent==='stale · evidence changed'`),10000,'withdrawal invalidates recorded research assessment');

@@ -30,6 +30,7 @@ from agent_kit.progress import (
     tokens_spent,
 )
 from agent_kit.scheduler import attempt_outcome
+from agent_kit import task_understanding
 from .research_control import evidence_signature, checkpoint, feedback
 
 STALL_REPEATS = 3
@@ -203,7 +204,12 @@ def _run_turns(
         # A completed model/tool pair is the safe steering boundary. Queue
         # delivery waits for resume; steering enters before the next model call.
         messages.extend(message_queue.deliver(root, run_id, messages))
-        if index and (index % 6 == 0 or repeats == 2 or stagnant == 4):
+        alignment_case = CaseRecord(root, run_id)
+        saved_frame = alignment_case.data.get('task_understanding')
+        was_stale = isinstance(saved_frame, dict) and saved_frame.get('stale') is True
+        interpretation = task_understanding.refresh(alignment_case)
+        needs_reassessment = interpretation['stale'] and (not was_stale or index == 0)
+        if needs_reassessment or (index and (index % 6 == 0 or repeats == 2 or stagnant == 4)):
             messages.append(feedback(checkpoint(
                 CaseRecord(root, run_id).data, stagnant=stagnant,
                 repeated=repeats == 2,

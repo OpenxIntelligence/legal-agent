@@ -313,3 +313,17 @@
 #matterDesk .research-references summary{cursor:pointer}
 #matterDesk .research-references>div{margin-top:8px}
 @media(max-width:600px){#matterDesk .research-tree{padding:9px}#matterDesk .research-tree ul,#matterDesk .research-node-body{padding-left:8px}}
+
+#matterDesk .task-understanding{font-size:12px;line-height:1.6;border:1px solid var(--line);border-radius:7px;padding:12px;margin:14px 0;overflow-wrap:anywhere}
+#matterDesk .task-understanding>summary{font-weight:650;cursor:pointer}
+#matterDesk .task-understanding>summary>span{font-weight:400;font-size:11px;margin-left:10px;color:var(--muted)}
+#matterDesk .task-understanding>div,#matterDesk .task-understanding>details{margin:9px 0}
+#matterDesk .task-understanding>details>summary{cursor:pointer;font-weight:600}
+#matterDesk .task-understanding ul{list-style:disc;padding-left:18px;border:0}
+#matterDesk .task-understanding li{margin:5px 0}
+#matterDesk .task-identity{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
+#matterDesk .task-identity dt{font-weight:600;color:var(--muted);font-size:11px}
+#matterDesk .task-identity dd{margin:2px 0;white-space:pre-wrap}
+#matterDesk .task-stale{padding:8px;border-left:3px solid #a7833d;background:#faf5e9;color:#805f24}
+#matterDesk .task-original{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;background:#f5f7f2;padding:9px;border:1px solid var(--line)}
+@media(max-width:600px){#matterDesk .task-identity{grid-template-columns:1fr}}

@@ -93,6 +93,10 @@ DEFINITION = {
 
 
 def run(ctx: Context, args: dict) -> dict:
+    from .. import task_understanding
+    if task_understanding.refresh(ctx.case)['stale']:
+        return {'filed': False, 'error': 'Task interpretation needs reassessment after new user direction.',
+                'next_action': 'Compare original request and delivered directions, reassess affected findings, and revise update_task_understanding before submitting.'}
     depends = args.get("depends_on") or []
     if not isinstance(depends, list):
         depends = []

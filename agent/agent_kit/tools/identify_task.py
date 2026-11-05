@@ -57,7 +57,8 @@ DEFINITION = {
     "description": "Identify the user's actual task before analyzing: what was asked, "
     "the objective and deliverable, the underlying legal problem, available and "
     "missing context, constraints, and the task categories with dependencies. "
-    "Call it first on substantive legal work; it sets the gate task type.",
+    "Record after initial source discovery when useful; source acquisition need not wait. "
+    "It sets the gate task type. Use update_task_understanding for a lightweight revisable interpretation.",
     "parameters": {
         "type": "object",
         "additionalProperties": False,

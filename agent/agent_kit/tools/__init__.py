@@ -68,6 +68,7 @@ from . import (
     triage_gap,
     update_plan,
     update_research_tree,
+    update_task_understanding,
     validate_decomposition,
     work_status,
 )
@@ -76,6 +77,7 @@ BASE_TOOLS = [
     "set_checklist",
     "update_plan",
     "update_research_tree",
+    "update_task_understanding",
     "list_documents",
     "analyze_document",
     "record_fact",
@@ -127,6 +129,7 @@ MODULES: dict[str, Any] = {
         set_checklist,
         update_plan,
         update_research_tree,
+        update_task_understanding,
         list_documents,
         analyze_document,
         record_fact,

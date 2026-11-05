@@ -1,5 +1,7 @@
 # Documentation
 
+- [Architecture and module boundaries](architecture/README.md)
+- [Foundational architecture directive](architecture/directive.md)
 - [Workspace design](product/matter-desk-design.md)
 - [Settings and execution protections](product/settings-and-execution.md)
 - [Infrastructure selection](product/agentic-infrastructure-landscape.md)

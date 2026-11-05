@@ -88,6 +88,10 @@ Browser checks require Node with built-in WebSocket support and Chromium. Set `B
 
 ## Project map
 
+See [Architecture](docs/architecture/README.md) for the current module boundaries,
+shared architectural directive, extension rules, and proposed increments with
+acceptance criteria.
+
 - [`agent/`](agent/README.md): agent loop, document tools, verification, saved records, and offline tests.
 - `ui/`: browser workspace and local HTTP server.
 - `scripts/`: local launcher.

@@ -1,5 +1,11 @@
 # Hierarchical Iterative Reasoning Architecture
 
+For the current application's boundaries and adoption plan, see
+[Legal Agent architecture](architecture/README.md). This document describes a
+separate opt-in orchestration implementation and historical evaluations. Its
+runtime uses scripted semantic judgments; it is not the default live agent
+loop. Historical test totals below are not current repository validation.
+
 Status: design + implementation (this doc is normative for the
  contracts; behavior lives in `agent/agent_kit/orchestration/`).
 

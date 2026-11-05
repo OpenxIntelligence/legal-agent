@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..case_record import CaseError
+
 if TYPE_CHECKING:
     from . import Context
 
@@ -21,6 +23,8 @@ DEFINITION = {
 
 
 def run(ctx: Context, args: dict) -> dict:
-    steps = [str(step) for step in args.get("plan") or []]
+    steps = args.get("plan")
+    if not isinstance(steps, list) or not all(isinstance(step, str) for step in steps):
+        raise CaseError("update_plan plan must be a list of strings")
     ctx.case.record_plan(steps)
     return {"plan": steps}

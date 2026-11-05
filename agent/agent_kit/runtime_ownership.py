@@ -16,6 +16,79 @@ import re
 import tempfile
 
 
+class CheckpointError(ValueError):
+    """A saved run cannot safely identify or reconstruct its checkpoint."""
+
+
+def run_folder(root: Path, run_id: str) -> Path:
+    """Resolve a local run identifier without following workspace/run links."""
+    if not isinstance(run_id, str) or not re.fullmatch(r"run-[A-Za-z0-9_-]{1,160}", run_id):
+        raise ValueError("Invalid run ID.")
+    root = Path(root).resolve()
+    workspace = root / "workspace"
+    runs = workspace / "runs"
+    folder = runs / run_id
+    if any(path.is_symlink() for path in (workspace, runs, folder)):
+        raise ValueError("Invalid run path: symbolic links are not allowed.")
+    return folder
+
+
+def run_file(root: Path, run_id: str, name: str) -> Path:
+    if name not in ("progress.json", "instructions.md", "objective.md"):
+        raise ValueError("Invalid checkpoint file.")
+    path = run_folder(root, run_id) / name
+    if path.is_symlink():
+        raise ValueError("Invalid checkpoint path: symbolic links are not allowed.")
+    return path
+
+
+def validate_checkpoint(progress, run_id: str) -> dict:
+    """Validate identity and execution-critical shape without inventing state.
+
+    Historical checkpoints may omit optional metadata such as config or turns;
+    present fields must have their expected types. Return the original data.
+    """
+    def reject(detail):
+        raise CheckpointError(f"Invalid checkpoint for {run_id}: {detail}.")
+    def count(value):
+        return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+    if not isinstance(progress, dict):
+        reject("expected an object")
+    if progress.get("run_id") != run_id:
+        reject("run ID does not match its directory")
+    if progress.get("status") not in ("running", "paused", "needs_input", "awaiting_signoff", "answered", "done"):
+        reject("unknown status")
+    if not count(progress.get("turn")):
+        reject("turn must be a non-negative integer")
+    messages = progress.get("messages")
+    if not isinstance(messages, list) or any(not isinstance(m, dict) for m in messages):
+        reject("messages must be a list of objects")
+    if not isinstance(progress.get("notes"), dict):
+        reject("notes must be an object")
+    if "verification" in progress and not isinstance(progress["verification"], bool):
+        reject("verification must be a boolean")
+    if "config" in progress and not isinstance(progress["config"], dict):
+        reject("config must be an object")
+    turns = progress.get("turns", [])
+    if not isinstance(turns, list) or any(not isinstance(t, dict) for t in turns):
+        reject("turns must be a list of objects")
+    for entry in turns:
+        if "end" not in entry:
+            reject("turn entry is missing its end boundary")
+        for key in ("end", "saw", "output"):
+            if key in entry and (not count(entry[key]) or entry[key] > len(messages)):
+                reject(f"turn {key} is outside the conversation")
+        if all(key in entry for key in ("saw", "output", "end")) and not entry["saw"] <= entry["output"] <= entry["end"]:
+            reject("turn boundaries are out of order")
+        for key in ("turn", "input_tokens", "output_tokens"):
+            if key in entry and not count(entry[key]):
+                reject(f"turn {key} must be a non-negative integer")
+    ids = progress.get("steering_directive_ids", [])
+    if not isinstance(ids, list) or any(not isinstance(i, str) or not i.strip() for i in ids) or len(ids) != len(set(ids)):
+        reject("steering receipt IDs must be unique non-empty strings")
+    return progress
+
+
 def _lock_file(root: Path):
     workspace = Path(root) / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
@@ -69,17 +142,15 @@ def reconcile_abandoned(root: Path, run_id: str) -> dict:
     No saved conversation means no safe continuation point. Reject rather than
     synthesizing context or assuming an uncheckpointed tool did not run.
     """
-    if not isinstance(run_id, str) or not re.fullmatch(r"run-[A-Za-z0-9_-]+", run_id):
-        raise ValueError("Invalid run ID.")
     root = Path(root).resolve()
-    folder = root / "workspace" / "runs" / run_id
-    if folder.is_symlink() or folder.resolve().parent != (root / "workspace" / "runs").resolve():
-        raise ValueError("Invalid run path.")
-    path = folder / "progress.json"
-    if path.is_symlink():
-        raise ValueError("Invalid progress path.")
+    folder = run_folder(root, run_id)
+    path = run_file(root, run_id, "progress.json")
     with runner_lock(root, run_id):
-        progress = json.loads(path.read_text())
+        try:
+            progress = json.loads(path.read_text())
+        except (ValueError, UnicodeError) as error:
+            raise CheckpointError(f"Invalid checkpoint for {run_id}: unreadable JSON.") from error
+        validate_checkpoint(progress, run_id)
         if not isinstance(progress, dict) or progress.get("status") != "running":
             raise RuntimeError("Only an abandoned running investigation can be recovered.")
         messages = progress.get("messages")

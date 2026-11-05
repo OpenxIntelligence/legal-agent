@@ -289,7 +289,7 @@ class ReadStatesTest(unittest.TestCase):
     def test_malformed_failure_entries_raise_loudly(self) -> None:
         path = self.root / "workspace/case_records" / f"{self.run_id}.json"
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"failed_reads": {"DOC-X": {"attempts": "many"}}}))
+        path.write_text(json.dumps({"run_id": self.run_id, "failed_reads": {"DOC-X": {"attempts": "many"}}}))
         case = CaseRecord(self.root, self.run_id)
         with self.assertRaises(CaseError):
             case.read_attempts("DOC-X")

@@ -188,6 +188,21 @@ await step('403 and409 errors are actionable, redacted, and never persist test s
     }finally{await evaluate(`window.fetch=window.__settingsOriginal`);}
   }
 });
+await step('effective provider hints show defaults, key target and disabled-call reason',async()=>{
+  const original=readFileSync(envPath,'utf8');
+  try{
+    writeFileSync(envPath,'MODEL_API_MODEL=""\nMODEL_API_BASE_URL=""\nMODEL_API_KEY="   "\n');
+    await openSettings(base);
+    await evaluate(`document.querySelector('#settingsRefresh').click()`);
+    await waitFor(()=>evaluate(`document.querySelector('#settingsModel')?.textContent==='muse-spark-1.3' && document.querySelector('#settingsProvider')?.textContent==='api.meta.ai'`),10000,'effective provider defaults after reload');
+    ensure(await evaluate(`document.querySelector('#settingsApiKeyLabel').textContent==='API key for api.meta.ai' && document.querySelector('#settingsCallStatus').textContent.includes('enable model investigations') && document.querySelector('#settingsKeyStatus').textContent==='No API key configured'`),'missing-key call availability or provider target is unclear');
+    writeFileSync(envPath,'MODEL_API_MODEL=fixture-custom-model\nMODEL_API_BASE_URL=https://provider.example.invalid/v1\nMODEL_API_KEY=settings-fixture-initial-token\n');
+    await evaluate(`document.querySelector('#settingsRefresh').click()`);
+    await waitFor(()=>evaluate(`document.querySelector('#settingsProvider')?.textContent==='provider.example.invalid'`),10000,'effective configuration refresh');
+    ensure(await evaluate(`document.querySelector('#settingsCallStatus').textContent.includes('fixture-custom-model at provider.example.invalid') && document.querySelector('#settingsCallStatus').textContent.includes('has not been tested') && document.querySelector('#settingsApiKeyLabel').textContent==='API key for provider.example.invalid'`),'provider hints stale or access falsely verified');
+    await noSecretLeaks();
+  }finally{writeFileSync(envPath,original);await openSettings(base);}
+});
 await step('desktop1280 and mobile390 Settings have no horizontal overflow',async()=>{
   await evaluate(`document.querySelector('#settingsRefresh').focus();document.querySelector('#settingsRefresh').click()`);
   await waitFor(()=>evaluate(`document.querySelector('#settingsRefresh')===document.activeElement && document.querySelector('#settingsKeyStatus')?.textContent.includes('No API key configured')`),10000,'refresh status keyboard focus');

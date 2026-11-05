@@ -250,14 +250,11 @@ class SweepPool:
                     f"assignment {index}: task {task['id']} is "
                     f"{task.get('status')}: cannot sweep it"
                 )
-            try:
-                reservation = int(
-                    raw.get("reservation", SWEEP_TOKENS_PER_DOC * len(docs))
-                )
-            except (TypeError, ValueError):
+            reservation = raw.get("reservation", SWEEP_TOKENS_PER_DOC * len(docs))
+            if isinstance(reservation, bool) or not isinstance(reservation, int) or reservation <= 0:
                 raise LeaseError(
-                    f"assignment {index}: reservation must be an integer"
-                ) from None
+                    f"assignment {index}: reservation must be a positive integer"
+                )
             entry = self.case.data.get("checklist", {}).get(issue, {})
             normalized.append(
                 {
@@ -436,16 +433,28 @@ class SweepPool:
                 total, status="discarded",
             )
             return outcome
+        if not isinstance(payload, dict) or not isinstance(payload.get("evidence"), list) or not isinstance(payload.get("read"), dict):
+            self._finish(outcome, job, "failed", f"{worker} returned a malformed result", total)
+            return outcome
+        read = payload["read"]
+        succeeded, failed = read.get("succeeded", []), read.get("failed", {})
+        if not isinstance(succeeded, list) or any(not isinstance(d, str) for d in succeeded) or not isinstance(failed, dict):
+            self._finish(outcome, job, "failed", f"{worker} returned malformed read receipts", total)
+            return outcome
+        if set(succeeded) & set(failed):
+            self._finish(outcome, job, "failed", f"{worker} returned contradictory read receipts", total)
+            return outcome
         evidence, dropped = self._verify(job, payload)
+        allowed = {d for d in job["document_ids"] if not self.case.flagged(d)}
+        for doc_id in dict.fromkeys(succeeded + list(failed)):
+            if doc_id not in allowed:
+                dropped.append({"worker": worker, "document_id": doc_id,
+                                "reason": "read receipt outside the permitted assignment"})
         outcome["_dropped"] = dropped
-        read = payload.get("read", {}) if isinstance(payload, dict) else {}
-        if isinstance(read, dict):
-            succeeded = read.get("succeeded", [])
-            outcome["_read_ok"] = [d for d in succeeded if isinstance(d, str)]
-            failed = read.get("failed", {})
-            outcome["_read_failed"] = failed if isinstance(failed, dict) else {}
+        outcome["_read_ok"] = [d for d in succeeded if d in allowed]
+        outcome["_read_failed"] = {d: value for d, value in failed.items() if d in allowed}
         text = (
-            f"{worker} read {len(job['document_ids'])} documents, "
+            f"{worker} read {len(set(outcome['_read_ok']))} documents, "
             f"{len(evidence)} verified quotes"
         )
         if overrun:
@@ -494,7 +503,7 @@ class SweepPool:
                 item.get("page"),
                 str(item.get("quote", "")),
             )
-            if not isinstance(doc_id, str) or not isinstance(page, int):
+            if not isinstance(doc_id, str) or not isinstance(page, int) or isinstance(page, bool):
                 dropped.append(
                     {
                         "worker": job["worker"],
@@ -503,6 +512,10 @@ class SweepPool:
                         "reason": "malformed evidence entry",
                     }
                 )
+                continue
+            if doc_id not in job["document_ids"] or self.case.flagged(doc_id):
+                dropped.append({"worker": job["worker"], "document_id": doc_id,
+                                "page": page, "reason": "evidence outside the permitted assignment"})
                 continue
             text = document_text.page_text(self.root, doc_id, page) or ""
             if not document_text.quote_on_page(quote, text):

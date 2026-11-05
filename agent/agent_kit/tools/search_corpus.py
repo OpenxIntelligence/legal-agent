@@ -72,7 +72,7 @@ def run(ctx: Context, args: dict) -> dict:
         return document_text.search_corpus(
             ctx.root,
             query,
-            list(document_ids) if document_ids else None,
+            list(document_ids) if document_ids is not None else None,
             flagged=flagged,
             meta=meta,
         )

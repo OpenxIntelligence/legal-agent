@@ -13,6 +13,38 @@ spec.loader.exec_module(ui)
 
 
 class MatterConsoleTests(unittest.TestCase):
+    def test_info_matches_effective_provider_configuration(self):
+        console = ui.Console(REPO)
+        with patch.object(console, '_process_env', return_value={
+            'MODEL_API_KEY': '   ', 'MODEL_API_MODEL': '', 'VERIFICATION': 'off'
+        }):
+            info = console.info()
+        self.assertFalse(info['api_key_configured'])
+        self.assertEqual(info['model'], 'muse-spark-1.3')
+        self.assertFalse(info['verification'])
+
+    def test_invalid_launch_options_do_not_mutate_control_or_dispatch(self):
+        console = ui.Console(REPO)
+        invalid = [(value, False) for value in (True, False, 0, -1, 201, 1.5, "30", [], None)]
+        invalid += [(30, value) for value in ("false", 0, 1, [], {})]
+        with patch.object(console, '_reset_control') as control, patch.object(console, '_launch') as launch:
+            for turns, step in invalid:
+                for action in (lambda: console.start_run(turns, step),
+                               lambda: console.resume_run('run-probe', turns, step)):
+                    with self.subTest(turns=turns, step=step), self.assertRaises(ValueError):
+                        action()
+            control.assert_not_called()
+            launch.assert_not_called()
+
+    def test_control_rejects_truthy_strings_and_unknown_options_before_writing(self):
+        console = ui.Console(REPO)
+        with patch.object(console, 'control') as read:
+            for body in ({'step': 'false'}, {'next': 'false'}, {'next': 1},
+                         {'steps': True}, [], None):
+                with self.subTest(body=body), self.assertRaises(ValueError):
+                    console.set_control(body)
+            read.assert_not_called()
+
     def test_later_upload_rejects_running_matter_before_ingestion(self):
         from unittest.mock import Mock
         console = ui.Console(REPO)

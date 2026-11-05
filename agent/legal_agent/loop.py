@@ -141,12 +141,11 @@ def resume_run(*, root: Path, run_id: str, client: OpenAI, turns: int = 15) -> d
         data = load_progress(root, run_id)
         data["note"] = step["note"]
         return data
-    _begin_slice(root, run_id, turns)
     saved = load_progress(root, run_id)
     messages: list = list(saved["messages"])
-    instructions = (
-        Path(root) / "workspace" / "runs" / run_id / "instructions.md"
-    ).read_text()
+    from agent_kit.runtime_ownership import run_file
+    instructions = run_file(root, run_id, "instructions.md").read_text()
+    _begin_slice(root, run_id, turns)
     messages.append({"role": "user", "content": step["message"]})
     messages.extend(steering_messages(root=root, run_id=run_id, messages=messages))
     messages.extend(message_queue.deliver(root, run_id, messages, include_queue=True))

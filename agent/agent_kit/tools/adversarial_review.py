@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._arguments import boolean_arg
+
 from ..case_record import ADVERSARIAL_LENSES
 
 if TYPE_CHECKING:
@@ -89,7 +91,7 @@ def run(ctx: Context, args: dict) -> dict:
         judge_needs=str(args.get("judge_needs", "")),
         alternative_theory=str(args.get("alternative_theory", "")),
         reversing_fact=str(args.get("reversing_fact", "")),
-        revision_needed=bool(args.get("revision_needed", False)),
+        revision_needed=boolean_arg("adversarial_review", args, "revision_needed"),
         revision=str(args.get("revision", "")),
         dropped=args.get("dropped"),
         lens=str(args.get("lens", "") or ""),

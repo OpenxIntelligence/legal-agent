@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._arguments import boolean_arg
+
 from ..reasoning import AUTHORITY_LEVELS, AUTHORITY_VERIFICATION
 
 if TYPE_CHECKING:
@@ -85,7 +87,7 @@ def run(ctx: Context, args: dict) -> dict:
         effective_date=str(args.get("effective_date", "")),
         level=str(args.get("level", "")),
         verification=str(args.get("verification", "")),
-        treatment_checked=bool(args.get("treatment_checked", False)),
+        treatment_checked=boolean_arg("register_authority", args, "treatment_checked"),
         treatment=str(args.get("treatment", "")),
         assessment=str(args.get("assessment", "")),
     )

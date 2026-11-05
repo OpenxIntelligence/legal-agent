@@ -1117,7 +1117,7 @@ class Console:
     def info(self) -> dict:
         if not self.workshop:
             return {"workshop": None, "jobs": []}
-        env = self._env()
+        env = self._process_env()
         return {
             "workshop": str(self.workshop),
             "isolated": self._isolated(),
@@ -1126,8 +1126,8 @@ class Console:
             "cases": self.cases(),
             "verification": env.get("VERIFICATION", "on").strip().lower()
             in ("on", "1", "true", "yes"),
-            "api_key_configured": bool(env.get("MODEL_API_KEY")),
-            "model": env.get("MODEL_API_MODEL", "muse-spark-1.3"),
+            "api_key_configured": not self._isolated() and bool(env.get("MODEL_API_KEY", "").strip()),
+            "model": env.get("MODEL_API_MODEL") or "muse-spark-1.3",
             "agent_ready": self._agent_ready(),
             "jobs": self.jobs.snapshot()[-10:],
             "control": self.control(),
@@ -1462,6 +1462,10 @@ class Console:
         }
 
     def set_control(self, change: dict) -> dict:
+        if not isinstance(change, dict) or set(change) - {"step", "next"}:
+            raise ValueError("Control accepts only step and next boolean options.")
+        if any(not isinstance(value, bool) for value in change.values()):
+            raise ValueError("Control options must be true or false.")
         control = self.control()
         if "step" in change:
             control["step"] = bool(change["step"])
@@ -1479,6 +1483,7 @@ class Console:
     # ---- actions ----
     def start_run(self, turns: int, step: bool = False) -> dict:
         self._require_live("starting agent runs")
+        self._validate_launch_options(turns, step)
         with self._launch_lock, self._settings_lock:
             self._require_model_key()
             if self._running():
@@ -1488,6 +1493,7 @@ class Console:
 
     def resume_run(self, run_id: str, turns: int, step: bool | None = None) -> dict:
         self._require_live("resuming agent runs")
+        self._validate_launch_options(turns, step)
         with self._launch_lock, self._settings_lock:
             self._require_model_key()
             self._run_dir(run_id)
@@ -1510,6 +1516,13 @@ class Console:
         tmp.write_text(json.dumps(control))
         tmp.replace(path)
 
+    @staticmethod
+    def _validate_launch_options(turns, step=None) -> None:
+        if type(turns) is not int or not 1 <= turns <= MAX_TURNS:
+            raise ValueError(f"turns must be an integer from 1 to {MAX_TURNS}.")
+        if step is not None and not isinstance(step, bool):
+            raise ValueError("step must be true or false.")
+
     def _launch(self, kind: str, turns: int, run_id: str) -> dict:
         # Register subprocesses atomically against provider key replacement.
         with self._settings_lock:
@@ -1518,7 +1531,7 @@ class Console:
     def _launch_with_settings(self, kind: str, turns: int, run_id: str) -> dict:
         if self._running():
             raise RuntimeError("an agent run is already in progress")
-        turns = max(1, min(int(turns), MAX_TURNS))
+        self._validate_launch_options(turns)
         argv = ["./helper", "run", "--turns", str(turns)]
         if run_id:
             argv += ["--resume", run_id]
@@ -2597,7 +2610,7 @@ def make_handler(console: Console) -> type[BaseHTTPRequestHandler]:  # noqa: C90
                             if store.get(parts[2]).get("status") == "incomplete":
                                 raise RuntimeError("Some documents could not be saved. Prepare a complete investigation before starting.")
                             store.refresh_deliveries(parts[2])
-                            return self._json(console.start_run(b.get("turns", 30), bool(b.get("step", False))))
+                            return self._json(console.start_run(b.get("turns", 30), b.get("step", False)))
                     # Scoped matters cannot reset the workshop or mutate provider config.
                     if parts[3:] in (["reset"], ["release"], ["case"], ["workshop"], ["project"]):
                         raise RuntimeError("This action is not available in a matter.")
@@ -2608,7 +2621,7 @@ def make_handler(console: Console) -> type[BaseHTTPRequestHandler]:  # noqa: C90
                     self._json(console.select_case(str(b.get("case", ""))))
                 elif parts == ["api", "runs"]:
                     self._json(
-                        console.start_run(b.get("turns", 30), bool(b.get("step")))
+                        console.start_run(b.get("turns", 30), b.get("step", False))
                     )
                 elif (
                     len(parts) == 4

@@ -52,6 +52,13 @@ window.SettingsUI = (() => {
     byId('settingsKeyStatus').textContent = configured ? 'Key configured · connection unverified' : 'No API key configured';
     byId('settingsKeyStatus').className = 'settings-pill';
     byId('settingsSave').textContent = configured ? 'Replace API key' : 'Save API key';
+    byId('settingsModel').textContent = settings.model || 'Not specified';
+    byId('settingsProvider').textContent = settings.provider_host || 'Not specified';
+    byId('settingsApiKeyLabel').textContent = 'API key for ' + (settings.provider_host || 'your configured provider');
+    byId('settingsCallStatus').textContent = settings.isolated
+      ? 'Model calls are disabled in this demo. Open the live workspace to investigate.'
+      : configured ? 'Investigations use ' + (settings.model || 'the configured model') + ' at ' + (settings.provider_host || 'the configured provider') + '. Provider access has not been tested.'
+      : 'Add a key for this provider to enable model investigations. Saving a key does not make a test call.';
     controls();
   }
   async function mutate(remove = false) {
@@ -106,14 +113,14 @@ window.SettingsUI = (() => {
     notice.setAttribute('role','status'); root.append(notice);
     const grid = el('div','',{className:'settings-grid'});
     const model = card('Model connection','Your key is write-only. The workspace never returns the saved key to this page.');
-    model.append(el('p','',{id:'settingsKeyStatus',className:'settings-pill'}));
+    model.append(el('p','',{id:'settingsKeyStatus',className:'settings-pill'}),el('p','',{id:'settingsCallStatus',className:'settings-help'}));
     const details = el('dl','',{className:'settings-details'});
     for (const [label,value] of [['Model',settings.model || 'Not specified'],['Provider',settings.provider_host || 'Not specified']]) {
-      details.append(el('dt',label),el('dd',value));
+      details.append(el('dt',label),el('dd',value,{id:label==='Model'?'settingsModel':'settingsProvider'}));
     }
     model.append(details);
     const form = el('form','',{id:'settingsKeyForm',autocomplete:'off'});
-    const label = el('label','API key',{htmlFor:'settingsApiKey'});
+    const label = el('label','API key',{id:'settingsApiKeyLabel',htmlFor:'settingsApiKey'});
     const input = el('input','',{id:'settingsApiKey',type:'password',name:'local-provider-key',autocomplete:'new-password',spellcheck:false,maxLength:4096});
     input.setAttribute('aria-describedby','settingsKeyHelp'); input.setAttribute('autocapitalize','none');
     const help = el('p','Stored in the local .env file (not encrypted), with owner-only permissions. Never stored in this browser. Use an 8–4096 character token containing letters, numbers, or . _ + / = -. The configured provider receives the key when you run an investigation.',{id:'settingsKeyHelp',className:'settings-help'});

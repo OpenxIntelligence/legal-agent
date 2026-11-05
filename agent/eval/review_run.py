@@ -78,7 +78,9 @@ def materialize(root: Path, name: str, catalogue: dict):
     from agent_kit.case_record import CaseRecord
 
     example = catalogue[name]
-    run_id = f"review-{name}"
+    # Catalogue labels may include namespaces such as sealed:name. Keep the
+    # storage identifier portable and independent of those display labels.
+    run_id = "review-" + hashlib.sha256(name.encode("utf-8")).hexdigest()[:24]
     for doc_id, spec in (example.get("documents") or {}).items():
         write_document(root, doc_id, list(spec.get("pages") or []))
     record = CaseRecord(root, run_id)

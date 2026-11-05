@@ -51,6 +51,18 @@ class LocalSettingsTests(unittest.TestCase):
         self.assertTrue(status["api_key_configured"])
         self.assertNotIn(FAKE_KEY, json.dumps(status))
 
+    def test_empty_model_provider_values_report_effective_worker_defaults(self):
+        for quote in ('', "'", '"'):
+            with self.subTest(quote=quote):
+                self.path.write_text(f'MODEL_API_MODEL={quote}{quote}\nMODEL_API_BASE_URL={quote}{quote}\n')
+                result = settings.status(self.path)
+                self.assertEqual(result['model'], 'muse-spark-1.3')
+                self.assertEqual(result['provider_host'], 'api.meta.ai')
+
+    def test_quoted_whitespace_key_does_not_report_model_access(self):
+        self.path.write_text('MODEL_API_KEY="   "\n')
+        self.assertFalse(settings.status(self.path)['api_key_configured'])
+
     def test_remove_retains_other_content_and_no_temporary_files(self):
         self.path.write_text("MODEL_API_KEY=old-token\nOTHER=one\n")
         settings.update_key(self.path, {"remove": True})

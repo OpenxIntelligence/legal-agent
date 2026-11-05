@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._arguments import boolean_arg
+
 from ..reasoning import QUESTION_CLASSES, TASK_TYPES
 
 if TYPE_CHECKING:
@@ -115,7 +117,7 @@ def run(ctx: Context, args: dict) -> dict:
         issue=str(args.get("issue", "") or ""),
         task_type=str(args.get("task_type", "") or ""),
         depends_on=args.get("depends_on") or [],
-        threshold=bool(args.get("threshold", False)),
+        threshold=boolean_arg("answer_foundational", args, "threshold"),
     )
     return {
         "answered": entry["id"],

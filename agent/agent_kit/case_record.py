@@ -423,10 +423,16 @@ ITEM_ID = re.compile(r"^[a-z][a-z0-9_]{0,47}$")
 
 class CaseRecord:
     def __init__(self, root: Path, run_id: str) -> None:
-        self.root = root
-        self.path = root / "workspace/case_records" / f"{run_id}.json"
+        if not isinstance(run_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,200}", run_id):
+            raise CaseError("Invalid case run ID.")
+        self.root = Path(root)
+        self.path = self.root / "workspace/case_records" / f"{run_id}.json"
+        if any(path.is_symlink() for path in (self.root / "workspace", self.path.parent, self.path)):
+            raise CaseError("Invalid case record path: symbolic links are not allowed.")
         if self.path.is_file():
             self.data: dict[str, Any] = json.loads(self.path.read_text())
+            if not isinstance(self.data, dict) or self.data.get("run_id") != run_id:
+                raise CaseError("Case record run ID does not match its file.")
         else:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.data = {

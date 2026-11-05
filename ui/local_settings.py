@@ -60,16 +60,16 @@ def status(path):
     try:
         fd = _parent_fd(path)
         values = _values(_read(fd, path.name))
-        model = values.get("MODEL_API_MODEL", "muse-spark-1.3")
+        model = (values.get("MODEL_API_MODEL") or "muse-spark-1.3")
         if not re.fullmatch(r"[A-Za-z0-9._:/-]{1,120}", model):
             model = "custom model"
         try:
-            host = urlsplit(values.get("MODEL_API_BASE_URL", "https://api.meta.ai/v1")).hostname or "custom provider"
+            host = urlsplit((values.get("MODEL_API_BASE_URL") or "https://api.meta.ai/v1")).hostname or "custom provider"
             if not re.fullmatch(r"[A-Za-z0-9.:-]{1,253}", host):
                 host = "custom provider"
         except ValueError:
             host = "custom provider"
-        return {"api_key_configured": bool(values.get("MODEL_API_KEY")), "model": model, "provider_host": host}
+        return {"api_key_configured": bool(values.get("MODEL_API_KEY", "").strip()), "model": model, "provider_host": host}
     except (OSError, UnicodeError, ValueError):
         raise RuntimeError("Local configuration cannot be accessed safely.") from None
     finally:

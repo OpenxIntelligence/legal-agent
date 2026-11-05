@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..case_record import QUERY_OUTCOMES
+from ._arguments import text_arg
 
 if TYPE_CHECKING:
     from . import Context
@@ -36,9 +37,9 @@ DEFINITION = {
 
 def run(ctx: Context, args: dict) -> dict:
     entry = ctx.case.resolve_query(
-        str(args.get("query", "")),
-        str(args.get("outcome", "")),
-        str(args.get("summary", "")),
-        str(args.get("coverage", "") or ""),
+        text_arg("resolve_query", args, "query"),
+        text_arg("resolve_query", args, "outcome"),
+        text_arg("resolve_query", args, "summary"),
+        text_arg("resolve_query", args, "coverage"),
     )
     return {"resolved": entry}

@@ -61,6 +61,8 @@ Use `--port 8877` to change the server port. Use `--demo-root /path/to/empty-fol
 
 ## Execution and limits
 
+Launch options require an integer turn count from 1 to 200 and boolean step controls. Invalid values are rejected before changing execution state. Saved checkpoints are checked for run identity and execution shape before resume; an invalid checkpoint requires inspection rather than automatic repair.
+
 This is a trusted local application, not a public multi-user service. The server binds to loopback. Agent tools run with your account’s permissions; matter folders and child-process credential filtering do not provide an operating-system sandbox. Settings reports execution permissions, recovery, database connections, and external trace export status. External database and telemetry services are not activated by the UI.
 
 The agent can record evidence, counterevidence, gaps, chronology, and review decisions. Some checks use a model; others compare quotes or structured records. Neither tool completion nor deterministic checks establish legal correctness. Have a qualified legal professional review the evidence, applicable law, jurisdiction, deadlines, and final output.

@@ -18,13 +18,16 @@ from __future__ import annotations
 
 import datetime
 import json
+import os
 import shutil
+import tempfile
 import time
 import uuid
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
 from . import usage
+from .runtime_ownership import CheckpointError, run_folder, run_file, validate_checkpoint
 from .settings import (
     DEFAULT_MAX_CONTEXT_BYTES,
     ConfigError,
@@ -104,7 +107,7 @@ def save_progress(
     entry: dict[str, Any] = {"time": now(), "status": status, "end": len(plain)}
     if response is not None:
         output = [_plain(item) for item in response.output]
-        before = progress["turns"][-1]["end"] if progress["turns"] else 0
+        before = progress["turns"][-1]["end"] if progress.get("turns") else 0
         start = next(
             (i for i in range(before, len(plain)) if output and plain[i] == output[0]),
             before,
@@ -118,7 +121,7 @@ def save_progress(
             input_tokens=getattr(usage, "input_tokens", 0) or 0,
             output_tokens=getattr(usage, "output_tokens", 0) or 0,
         )
-    progress["turns"].append(entry)
+    progress.setdefault("turns", []).append(entry)
     progress["notes"].update(notes)
     progress.update(messages=plain, status=status)
     _write(root, run_id, progress)
@@ -129,10 +132,14 @@ def save_progress(
 
 def load_progress(root: Path, run_id: str) -> dict:
     """A run's saved progress: messages, status, turn, verification, notes."""
-    path = _folder(root, run_id) / "progress.json"
+    path = run_file(root, run_id, "progress.json")
     if not path.is_file():
         raise FileNotFoundError(f"no such run: {run_id}")
-    return json.loads(path.read_text())
+    try:
+        data = json.loads(path.read_text())
+    except (ValueError, UnicodeError) as error:
+        raise CheckpointError(f"Invalid checkpoint for {run_id}: unreadable JSON.") from error
+    return validate_checkpoint(data, run_id)
 
 
 def config_snapshot(verification: bool | None = None) -> dict:
@@ -357,11 +364,10 @@ def branch(client: OpenAI, root: Path, run_id: str) -> str:
     )
     if index is None:
         raise RuntimeError(f"{run_id} never called set_checklist")
-    folder = _folder(root, run_id)
     new_id = new_run(
         root,
-        instructions=(folder / "instructions.md").read_text(),
-        objective=(folder / "objective.md").read_text(),
+        instructions=run_file(root, run_id, "instructions.md").read_text(),
+        objective=run_file(root, run_id, "objective.md").read_text(),
         verification=True,
     )
     call = messages[index]
@@ -437,7 +443,7 @@ def _stop(status: str, note: str) -> dict:
 
 
 def _folder(root: Path, run_id: str) -> Path:
-    return Path(root) / "workspace/runs" / run_id
+    return run_folder(root, run_id)
 
 
 def checkpoint_steering(root: Path, run_id: str, messages: list, directive_ids: list[str]) -> None:
@@ -446,6 +452,10 @@ def checkpoint_steering(root: Path, run_id: str, messages: list, directive_ids: 
     This is not a completed turn and must not consume step-mode credits.
     The runner owns writes to progress.json for the duration of a slice.
     """
+    if not isinstance(directive_ids, list) or not directive_ids or any(
+        not isinstance(item, str) or not item.strip() for item in directive_ids
+    ) or len(directive_ids) != len(set(directive_ids)):
+        raise CheckpointError("Steering receipt IDs must be unique non-empty strings.")
     progress = load_progress(root, run_id)
     progress["messages"] = _plain(messages)
     delivered = progress.setdefault("steering_directive_ids", [])
@@ -454,10 +464,21 @@ def checkpoint_steering(root: Path, run_id: str, messages: list, directive_ids: 
 
 
 def _write(root: Path, run_id: str, progress: dict) -> None:
-    path = _folder(root, run_id) / "progress.json"
-    tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(progress, indent=1))
-    tmp.replace(path)
+    validate_checkpoint(progress, run_id)
+    path = run_file(root, run_id, "progress.json")
+    # Serialize before touching the existing checkpoint. Unique temporary names
+    # also prevent a stale leftover/symlink from redirecting checkpoint writes.
+    payload = json.dumps(progress, indent=1, allow_nan=False)
+    fd, temporary = tempfile.mkstemp(prefix=".progress-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def _plain(value: Any) -> Any:

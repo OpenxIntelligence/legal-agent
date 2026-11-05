@@ -434,6 +434,59 @@ class MergeTest(PoolCase):
             self.assertEqual(110, attempt["tokens_used"])
 
 
+class DelegatedScopeTest(PoolCase):
+    def test_out_of_assignment_quotes_and_receipts_cannot_be_accepted(self):
+        self.case.set_checklist(ITEMS)
+        self.read('DOC-REPORT', 'DOC-MINUTES')
+        # Reading in a different operation does not authorize this worker's scope.
+        def foreign_result(wctx):
+            return {'evidence': [{'document_id': 'DOC-MINUTES', 'page': 1,
+                                  'quote': self.quote('DOC-MINUTES'), 'claim': 'Foreign'}],
+                    'read': {'succeeded': ['DOC-MINUTES'], 'failed': {'DOC-REF': 'fabricated failure'}}}
+        before = self.fresh().data['failed_reads'].copy()
+        result = self.pool().sweep([{'issue': 'alpha', 'document_ids': ['DOC-REPORT']}], job_fn=foreign_result)
+        self.assertEqual([], result['sweeps'][0]['evidence'])
+        self.assertEqual(3, len(result['dropped']))
+        self.assertEqual(before, self.fresh().data['failed_reads'])
+        self.assertTrue(all('permitted assignment' in row['reason'] for row in result['dropped']))
+
+    def test_invalid_reservation_cannot_bypass_admission_or_start_workers(self):
+        self.case.set_checklist(ITEMS)
+        called = []
+        for reservation in (-100, 0, True, 1.5, "100", None):
+            with self.subTest(reservation=reservation):
+                with self.assertRaisesRegex(LeaseError, "positive integer"):
+                    self.pool().sweep(
+                        [{"issue": "alpha", "document_ids": ["DOC-REPORT"],
+                          "reservation": reservation}],
+                        job_fn=lambda context: called.append(context),
+                    )
+        self.assertEqual([], called)
+        self.assertEqual([], self.fresh().task("T1")["attempts"])
+
+    def test_contradictory_read_receipts_fail(self):
+        self.case.set_checklist(ITEMS)
+        result = self.pool().sweep(
+            [{"issue": "alpha", "document_ids": ["DOC-REPORT"]}],
+            job_fn=lambda context: {"evidence": [], "read": {
+                "succeeded": ["DOC-REPORT"], "failed": {"DOC-REPORT": "failure"}}},
+        )
+        self.assertEqual("failed", result["sweeps"][0]["status"])
+        self.assertIn("contradictory", result["sweeps"][0]["reason"])
+        self.assertNotIn("DOC-REPORT", self.fresh().data["read_ids"])
+
+    def test_malformed_worker_results_fail_without_clean_completion(self):
+        self.case.set_checklist(ITEMS)
+        for payload in (None, [], {'evidence': [], 'read': {'succeeded': 'DOC-REPORT'}},
+                        {'evidence': 'quotes', 'read': {}}):
+            with self.subTest(payload=payload):
+                result = self.pool().sweep([{'issue': 'alpha', 'document_ids': ['DOC-REPORT']}],
+                                           job_fn=lambda context: payload)
+                self.assertEqual('failed', result['sweeps'][0]['status'])
+                self.assertIn('malformed', result['sweeps'][0]['reason'])
+                self.assertNotIn('DOC-REPORT', self.fresh().data['read_ids'])
+
+
 class SweepToolTest(PoolCase):
     def sweep(self, assignments):
         return tools.run(

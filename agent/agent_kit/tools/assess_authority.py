@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ._arguments import boolean_arg
+
 if TYPE_CHECKING:
     from . import Context
 
@@ -59,7 +61,7 @@ def run(ctx: Context, args: dict) -> dict:
         str(args.get("authority_id", "")),
         page=args.get("page", 0),
         quote=str(args.get("quote", "")),
-        treatment_read=bool(args.get("treatment_read", False)),
+        treatment_read=boolean_arg("assess_authority", args, "treatment_read"),
         detail=str(args.get("detail", "")),
     )
     return {

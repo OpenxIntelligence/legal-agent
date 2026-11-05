@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const DRAFT_KEY = 'legal-agent.intake.v1';
-  const state = {id:null, matter:null, run:null, timer:null, loading:false, refreshFlight:null, files:[], lastMessages:'', lastRail:'', lastResults:'', history:[], lastReplyContext:'', starting:false, recovering:false, sourceSequence:0, reviewOpening:false, selectedRun:null, awaitingRun:null, sending:null, uploading:false, epoch:0, lastOverview:'', pane:'findings', replyReady:false, sourceOrigin:null, replySnapshot:null, sourceRevision:null};
+  const state = {id:null, matter:null, run:null, timer:null, loading:false, refreshFlight:null, files:[], lastMessages:'', lastRail:'', lastResults:'', history:[], lastReplyContext:'', starting:false, pendingStart:null, recovering:false, sourceSequence:0, reviewOpening:false, selectedRun:null, awaitingRun:null, sending:null, uploading:false, epoch:0, lastOverview:'', pane:'findings', replyReady:false, sourceOrigin:null, replySnapshot:null, sourceRevision:null};
   const list = v => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
   const text = v => v == null ? '' : (typeof v === 'string' ? v : JSON.stringify(v));
   const e = v => esc(text(v));
@@ -89,7 +89,8 @@
   function updateMode() {
     if($('homeView')&&!$('homeView').hidden&&$('intakeMode')){
       $('intakeMode').innerHTML=modeLine(!!info.isolated);
-      $('prepareMatter').textContent=info.isolated?'Save demo intake':'Prepare investigation';
+      $('prepareMatter').textContent=info.isolated?'Save demo intake':info.api_key_configured?'Send to agent':'Save question';
+      if($('intakeSendHint'))$('intakeSendHint').textContent=info.isolated?'No model call. Demo saves only.':info.api_key_configured?'Enter to send · Shift+Enter for a new line. Sends records to your provider.':'Add an API key in Settings to receive agent responses.';
     }
     if(state.matter&&$('matterView')&&!$('matterView').hidden&&$('matterMode'))$('matterMode').innerHTML=modeLine(state.matter.demo,modelConnected());
   }
@@ -106,7 +107,7 @@
             <details class="intake-starters"><summary>Choose a task to help frame your question</summary><div class="task-starters" role="group" aria-label="Start with a task"><button type="button" data-intake-task="notice">Understand a notice</button><button type="button" data-intake-task="contract">Review a contract</button><button type="button" data-intake-task="timeline">Build a timeline</button><button type="button" data-intake-task="claims">Challenge a claim</button></div></details>
             <label class="composer-label" for="matterQuestion">Your legal question or task</label>
             <textarea id="matterQuestion" name="question" required minlength="10" maxlength="12000" rows="5" placeholder="What happened, what do you need to decide, and what should the agent help you produce?" aria-describedby="questionHint"></textarea>
-            <p id="questionHint" class="field-hint">Add the key facts and the result you need. Documents are optional.</p>
+            <p id="questionHint" class="field-hint">Describe your legal question in at least 10 characters. Documents are optional.</p><div class="composer-actions intake-send"><button type="submit" class="primary" id="prepareMatter">Save question</button><span id="intakeSendHint">No model call until Send or Start.</span></div><div id="intakeStatus" class="form-status" role="status" aria-live="polite"></div>
             <div class="intake-attachments"><div id="matterDropzone" class="intake-dropzone"><label class="attachment-label" for="matterFiles">Add supporting documents <span>optional</span></label><p id="matterDropHint">Drop files here, or choose them below.</p><input id="matterFiles" type="file" multiple accept=".txt,.md,.pdf" aria-describedby="matterDropHint matterFileTypes"><p id="matterFileTypes" class="field-hint">PDF, text, or Markdown · up to 8 files</p></div><details class="intake-file-limits"><summary>File size and naming requirements</summary><p>PDFs: up to 5 MB (5,000,000 bytes) each. Text / Markdown: up to 256,000 characters each.</p><p>Spaces and punctuation are converted to underscores for storage. Names are limited to 64 characters before the extension; the saved name is shown below. Files must have distinct names before their extensions.</p></details><ul id="intakeFiles" class="attachment-list" aria-label="Selected documents"></ul></div>
             <details class="intake-context"><summary>Add context <span>location, dates, preferred result</span></summary><div class="context-grid">
               <label>Your perspective<select name="role" id="matterRole"><option value="person">I need help understanding a legal issue</option><option value="lawyer">I am preparing legal work</option><option value="reviewer">I am reviewing an argument or draft</option></select></label>
@@ -114,7 +115,7 @@
               <label>Relevant date or deadline <span>as stated in your records</span><input name="deadline" id="matterDeadline" maxlength="200" placeholder="For example: reply requested by 20 November"></label>
               <label>What would help you?<select name="deliverable" id="matterDeliverable"><option value="reviewable memo">A source-linked explanation</option><option value="chronology">A timeline of events</option><option value="claim review">A review of claims and evidence</option><option value="questions for counsel">Questions to discuss with a lawyer</option></select></label>
             </div></details>
-            <div class="composer-actions"><button type="submit" class="primary" id="prepareMatter">Prepare investigation</button><span>No model call at this step</span></div><div id="intakeStatus" class="form-status" role="status" aria-live="polite"></div>
+
             <div class="draft-note">Text draft saved in this browser. Reattach unsaved files after reloading.<button type="button" id="clearIntake" class="text-button">Clear draft</button></div>
           </form>
           <section class="saved-matters" aria-labelledby="savedMattersHeading"><div class="section-heading"><h2 id="savedMattersHeading">Your investigations</h2><button type="button" class="text-button" id="refreshMatters">Refresh</button></div><label class="matter-search-label" for="matterSearch">Find an investigation<input type="search" id="matterSearch" placeholder="Search questions or titles" autocomplete="off"></label><div id="matterList" aria-live="polite">Loading saved investigations…</div></section>
@@ -125,6 +126,8 @@
       for (const key of ['question','role','jurisdiction','deadline','deliverable']) if (draft[key] != null) form.elements[key].value=draft[key];
       form.addEventListener('input',()=>saveDraft(form));
       form.addEventListener('submit',prepare);
+      $('matterQuestion').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();if(!$('prepareMatter').disabled)form.requestSubmit();}});
+      $('matterQuestion').addEventListener('invalid',()=>setStatus('intakeStatus','Describe the legal question you want help with (at least 10 characters).',true));
       $('matterFiles').addEventListener('change',selectFiles);
       const dropzone=$('matterDropzone');
       dropzone.addEventListener('dragover',event=>{event.preventDefault();if(!$('prepareMatter').disabled){event.dataTransfer.dropEffect='copy';dropzone.classList.add('is-dragging');}});
@@ -138,7 +141,8 @@
       el.querySelectorAll('[data-example]').forEach(button=>button.addEventListener('click',()=>openDemo(button.dataset.example)));
     }
     $('intakeMode').innerHTML=modeLine(!!info.isolated);
-    $('prepareMatter').textContent=info.isolated?'Save demo intake':'Prepare investigation';
+    $('prepareMatter').textContent=info.isolated?'Save demo intake':info.api_key_configured?'Send to agent':'Save question';
+      if($('intakeSendHint'))$('intakeSendHint').textContent=info.isolated?'No model call. Demo saves only.':info.api_key_configured?'Enter to send · Shift+Enter for a new line. Sends records to your provider.':'Add an API key in Settings to receive agent responses.';
     await loadMatters();
   }
   async function loadMatters() {
@@ -189,6 +193,7 @@
       const matter=await api('/api/matters',body);
       try{localStorage.removeItem(DRAFT_KEY);}catch{}
       state.files=[];form.reset();renderFiles();
+      state.pendingStart=!info.isolated&&!!info.api_key_configured?matter.id:null;
       setStatus('intakeStatus','Investigation saved.');location.hash=`#/matter/${encodeURIComponent(matter.id)}`;
     }catch(error){setStatus('intakeStatus',`Not saved: ${error.message}`,true);}finally{button.disabled=false;}
   }
@@ -217,6 +222,7 @@
     $('exportMatter').addEventListener('click',exportMatter);
     const openingEpoch=state.epoch;await refresh();if(state.id!==id||state.epoch!==openingEpoch)return;focusHeading('matterTitle',true);
     state.timer=setInterval(()=>{if(location.hash.split('?')[0]===`#/matter/${encodeURIComponent(state.id)}`)refresh();else stop();},3000);
+    if(state.pendingStart===id){state.pendingStart=null;await start(false,true);}
   }
   function selectRun(id) {
     if(id===state.selectedRun)return;

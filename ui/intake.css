@@ -30,3 +30,11 @@
   #homeView .intake-context summary{min-height:44px}
   #homeView .intake-dropzone{padding:12px}
 }
+
+/* Keep the primary action with the question instead of below optional intake. */
+#homeView .workspace-title h1{font-size:clamp(25px,3vw,36px)}
+#homeView .intake-composer textarea{min-height:100px;max-height:240px}
+#homeView .intake-send{margin:10px 0 0;align-items:center;flex-wrap:wrap}
+#homeView .intake-send button{min-height:44px;min-width:138px}
+#homeView .intake-send span{flex:1;min-width:170px}
+#homeView .intake-starters{margin-bottom:10px;padding-bottom:4px}

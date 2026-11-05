@@ -37,8 +37,8 @@ def demo_environment(path: Path) -> dict[str, str]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Legal Agent — evidence to reviewed work product")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--demo", action="store_true", help="isolated fictional workspace (default; no API calls)")
-    mode.add_argument("--live", action="store_true", help="local investigation console; uses your agent/.env when you start a run")
+    mode.add_argument("--demo", action="store_true", help="isolated fictional workspace (no API calls)")
+    mode.add_argument("--live", action="store_true", help="local investigation console (default); uses your agent/.env when you Send or Start")
     parser.add_argument("--demo-root", type=Path, default=ROOT / ".local/demo")
     parser.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
@@ -47,7 +47,7 @@ def main() -> int:
     env = os.environ.copy()
     env["PYTHON"] = sys.executable
     command = [sys.executable, str(ROOT / "ui/ui.py"), "--port", str(args.port)]
-    if args.live:
+    if not args.demo:
         env.pop("LEGAL_AGENT_ROOT", None)
         env.pop("LEGAL_AGENT_FAKE_MODEL", None)
         env.pop("LEGAL_AGENT_DEMO", None)

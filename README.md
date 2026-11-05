@@ -4,36 +4,28 @@ A local, AI-native workspace for investigating legal questions against documents
 
 ## Start locally
 
-Use Python 3.11 or newer. The isolated demo needs no API key or Python dependencies:
-
-```sh
-./legal-agent --demo
-```
-
-Open **http://127.0.0.1:8765**. Prepare a question, upload text, Markdown, or PDF documents, and save context. Demo mode does not investigate or answer your question: model calls are disabled, and it never loads `agent/.env`. Saved demo work persists in `.local/demo/`. Synthetic examples illustrate review mechanics, not model accuracy.
-
-Use `--port 8877` to change the port, or `--demo-root /path/to/empty-folder` for a separate demo workspace. The launcher refuses to adopt a nonempty folder it does not own.
-
-## Connect a model
+Use Python 3.11 or newer. From the repository root:
 
 ```sh
 python3 -m venv agent/.venv
 agent/.venv/bin/python -m pip install -r agent/requirements.txt
 # Preserve any existing local configuration.
 test -e agent/.env || cp agent/.env.example agent/.env
-./legal-agent --live
+./legal-agent
 ```
 
-Open **Settings** to save a model API key. The field is write-only: saved keys are never returned to the browser. The server writes `agent/.env` with owner-only permissions; the file is plaintext, not encrypted, and is ignored by Git. A configured key is not proof that the provider accepts it.
+Open **http://127.0.0.1:8765**. The default is the **live local console**; `--live` selects the same mode explicitly. Opening the console does not call your model. Send or Start initiates a model investigation when credentials and document preparation are ready.
+
+Open **Settings** to save your model API key. The field is write-only: saved keys are never returned to the browser. The server writes `agent/.env` with owner-only permissions; the file is plaintext, not encrypted, and is ignored by Git. A configured key is not proof that the provider accepts it.
 
 Configure `MODEL_API_BASE_URL` and `MODEL_API_MODEL` in `agent/.env` for your provider. The included defaults use the Meta Model API through the OpenAI Python SDK. Other providers must support the API and tool/document behavior this runtime uses; changing the URL alone does not establish compatibility. An optional `COURTLISTENER_TOKEN` enables configured caselaw lookups. Keep `VERIFICATION=on` for verification and review gates. `CASE_DIR` selects the optional command-line case; new workspace matters use their own saved question and records.
 
-Starting or resuming a live investigation sends matter content to the configured provider and may incur charges. Workspace actions use slices of up to 10 turns. Set `RUN_TOKEN_BUDGET` in local configuration if you need a per-run token budget; this is not a billing limit.
+Live investigation sends matter content to the configured provider and may incur charges. Workspace actions use slices of up to 10 turns. Set `RUN_TOKEN_BUDGET` in local configuration if you need a per-run token budget; this is not a billing limit.
 
 ## Work in a matter
 
-1. Describe the question and relevant jurisdiction, dates, and requested output. Upload the records you want examined.
-2. Start the investigation. Follow the Copilot conversation beside findings and work products. Recorded activity shows attempted work, not verified conclusions.
+1. Describe a meaningful legal question (at least 10 characters), with relevant jurisdiction, dates, and requested output. Upload supporting records if available; documents are optional.
+2. Choose **Send**. The initial question is saved first, then an investigation starts when a key is configured and preparation succeeds. Without a key, the question is saved and you can connect in Settings before starting. Follow the Copilot conversation beside findings and work products. Recorded activity shows attempted work, not verified conclusions.
 3. Open source citations and the local **Record explorer** to inspect documents, claims, citations, requests, and review records. These read-only queries make no model call.
 4. Answer open requests or send directions. Messages saved during an active slice are queued for a later resume; a saved receipt does not confirm application.
 5. Open an evidence review, edit claims, check sources, and save a versioned review. Export the saved review separately from the original agent draft and conversation; unsent edits are excluded.
@@ -41,6 +33,23 @@ Starting or resuming a live investigation sends matter content to the configured
 New documents require a new investigation so the agent uses the updated records. Earlier runs remain available in run history. Draft messages persist per investigation in browser storage when available; saved matter records persist on the local server. PDF upload is not a guarantee of successful extraction or safe contents: the workspace shows extraction and quarantine states explicitly.
 
 Runner ownership survives server restarts. When an interrupted run offers **Recover saved run**, recovery updates saved state without calling the model. Inspect activity and records before choosing Resume: tool effects after the last checkpoint may already exist, and continuation may repeat work. A run without a usable checkpoint requires a new investigation.
+
+## Optional isolated demo
+
+```sh
+./legal-agent --demo
+```
+
+Demo mode uses the standard library, requires no API key, and never loads `agent/.env`. It saves questions and context but cannot investigate or answer them. Saved demo work persists in `.local/demo/`; fictional examples illustrate review mechanics, not live-model accuracy. Live and demo workspaces are separate.
+
+Use `--port 8877` to change the server port. Use `--demo-root /path/to/empty-folder` for a separate demo workspace; the launcher refuses to adopt a nonempty folder it does not own.
+
+## Troubleshooting Send
+
+- **The page still says Demo:** check the URL and the terminal serving that port. An older demo server or browser tab can remain open after installing newer code. Stop that server in its terminal, run `./legal-agent`, and reopen the printed URL. Alternatively run `./legal-agent --port 8877` and open that port. Refresh the page after restarting.
+- **Your question saves without an answer:** check Settings for a configured key and inspect document preparation errors. A missing key makes Send save-only. After connecting, return to the saved matter and start the investigation. Saving is not confirmation of a model response.
+- **A message such as “Hi” is rejected:** intake requires a question of at least 10 characters. This is a matter investigation workspace, not general chat. Describe the situation and what you need to determine, such as “Does this contract allow termination without notice?”
+- **A configured key still fails:** inspect the visible run error and verify the provider URL, model, and account access. Key presence does not validate authentication, quota, or model compatibility. Resolve the error before retrying; repeated live requests may incur charges.
 
 ## Execution and limits
 

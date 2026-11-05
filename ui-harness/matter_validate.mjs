@@ -627,6 +627,20 @@ await step('abandoned execution shows recovery beside chat instead of a permanen
     ensure(await evaluate(`document.querySelector('#matterResults').textContent.includes('does not call your model')`),'recovery cost boundary missing');
   }finally{writeFileSync(file,previous);}
 });
+await step('initial Send stays visible, Enter saves once before dispatch, and provider errors stay actionable',async()=>{
+  await send('Emulation.setDeviceMetricsOverride',{width:1280,height:720,deviceScaleFactor:1,mobile:false});
+  await evaluate(`window.__intakeFetch=window.fetch;window.__intakeStarts=0;window.__intakeSaved=false;window.fetch=async function(url,opts){const p=new URL(String(url),location.href).pathname;if(opts?.method==='POST'&&p.endsWith('/start')){window.__intakeStarts++;const saved=await(await window.__intakeFetch(p.slice(0,-6))).json();window.__intakeSaved=saved.question==='Explain this fictional contract notice to me.';return new Response(JSON.stringify({error:'Synthetic initial provider failure'}),{status:503});}const response=await window.__intakeFetch.apply(this,arguments);if(!opts?.method&&(p==='/api/info'||(p.startsWith('/api/matters/')&&p.split('/').length===4))){const body=await response.json();body.isolated=false;body.demo=false;body.can_run=true;body.api_key_configured=true;return new Response(JSON.stringify(body),{status:200});}return response;};location.hash='#/home';`);
+  try{
+    await waitFor(()=>evaluate(`document.querySelector('#prepareMatter')?.textContent==='Send to agent'`),10000,'initial live Send');
+    await evaluate(`window.scrollTo(0,0);document.querySelector('#matterQuestion').value='Explain this fictional contract notice to me.';`);
+    ensure(await evaluate(`(()=>{const r=document.querySelector('#prepareMatter').getBoundingClientRect();return r.top>=0&&r.bottom<innerHeight;})()`),'initial action is below short laptop viewport');
+    await visibleClick('#matterQuestion');
+    await send('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r'});await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
+    await waitFor(()=>evaluate(`window.__intakeStarts===1&&document.querySelector('#matterReplyStatus')?.textContent.includes('Synthetic initial provider failure')`),15000,'initial saved dispatch and explicit failure');
+    ensure(await evaluate(`window.__intakeSaved`),'initial question was not persisted before dispatch');
+    ensure(await evaluate(`!document.querySelector('#matterConversation').textContent.includes('Synthetic initial provider failure')`),'dispatch failure fabricated conversation');
+  }finally{await evaluate(`window.fetch=window.__intakeFetch`);}
+});
 const fails=results.filter(r=>r.status==='FAIL');
 writeFileSync(`${shotDir}/matter-results.json`,JSON.stringify(results,null,2)+'\n');
 console.log(`\nMATTER SUMMARY: ${results.length-fails.length}/${results.length} ok, ${fails.length} failed`);

@@ -33,6 +33,16 @@ class VerificationDefaultsTest(unittest.TestCase):
             with self.assertRaises(settings.ConfigError):
                 settings.validate_runtime_config()
 
+class LauncherModeTest(unittest.TestCase):
+    def test_default_opens_live_console_without_starting_agent(self):
+        launch = load("default_live_launch", ROOT / "scripts/launch.py")
+        with patch.object(sys, "argv", ["legal-agent"]), patch.object(launch.subprocess, "call", return_value=0) as call:
+            self.assertEqual(0, launch.main())
+        command = call.call_args.args[0]
+        self.assertNotIn("--agent-root", command)
+        self.assertNotIn("LEGAL_AGENT_FAKE_MODEL", call.call_args.kwargs["env"])
+        self.assertTrue(command[1].endswith("ui/ui.py"))
+
 class DemoIsolationTest(unittest.TestCase):
     def test_demo_environment_drops_provider_credentials(self):
         launch = load("product_launch", ROOT / "scripts/launch.py")

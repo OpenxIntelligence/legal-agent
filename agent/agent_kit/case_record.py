@@ -1953,6 +1953,7 @@ class CaseRecord:
         document = document_text.get_document(self.root, document_id)
         sources = self.data.setdefault("sources", {})
         sources[document_id] = {
+            **self.data.get("public_sources", {}).get(document_id, {}),
             "document_id": document_id,
             "repo": repo,
             "citation": str(citation),

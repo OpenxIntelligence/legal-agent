@@ -627,6 +627,74 @@ await step('abandoned execution shows recovery beside chat instead of a permanen
     ensure(await evaluate(`document.querySelector('#matterResults').textContent.includes('does not call your model')`),'recovery cost boundary missing');
   }finally{writeFileSync(file,previous);}
 });
+await step('investigation rail follows recorded plans, requests, gaps and safe source provenance',async()=>{
+  ensure(fixtureRoot&&/legal-agent-matter-browser\./.test(fixtureRoot),'adaptive rail fixture requires owned ephemeral test root');
+  const root=`${fixtureRoot}/workspace/matters/${matterId}`,run='run-zz-history-fixture';
+  const file=`${root}/workspace/case_records/${run}.json`,original=readFileSync(file,'utf8'),record=JSON.parse(original);
+  record.plan={revision:2,steps:['Check the agency notice rule first.']};
+  record.checklist={agency_notice:{question:'Did the agency issue a timely notice?',evidence_needed:'The current statute and designated-country notice.',status:'open'}};
+  record.requests=[{id:'request-adaptive',need:'Which country designation and November year?',item:'agency_notice',status:'open'}];
+  record.memo={conclusion:'Fictional research draft',findings:[{item:'agency_notice',summary:'A fictional finding.',citations:[{document_id:'public-fixture',page:1,quote:'Fictional authority excerpt.'}]}],gaps:'Identify the designation and year; then compare the official notice dates.'};
+  record.public_sources={'public-fixture':{document_id:'public-fixture',url:'https://www.uscis.gov/humanitarian/temporary-protected-status',title:'Fixture agency authority',retrieved_at:'2026-11-04',version:'Fetched snapshot'}};
+  record.sources={'public-fixture':{citation:'Fixture citation'},'unsafe-fixture':{url:'javascript:alert(1)',title:'Unsafe fixture'}};
+  writeFileSync(file,JSON.stringify(record));
+  try{
+    await evaluate(`location.hash='#/matter/${matterId}?run=${run}'`);await reloadPage();
+    await waitFor(()=>evaluate(`document.querySelector('#matterRail')?.textContent.includes('Check the agency notice rule first.')`),15000,'run-backed agent plan');
+    ensure(await evaluate(`document.querySelector('#matterRail').textContent.includes('Did the agency issue a timely notice?')`),'actual issue question absent');
+    ensure(!await evaluate(`document.querySelector('#matterRail').textContent.includes('Initial intake checklist')`),'static intake shown as current plan');
+    ensure(await evaluate(`document.querySelector('#matterResults').textContent.includes('Identify the designation and year; then compare the official notice dates.')`),'string memo gaps silently lost');
+    ensure(await evaluate(`document.querySelector('#matterRail a[href="https://www.uscis.gov/humanitarian/temporary-protected-status"]') && document.querySelector('.matter-citation a[href="https://www.uscis.gov/humanitarian/temporary-protected-status"]')`),'original source provenance not linked in rail and citation');
+    ensure(!await evaluate(`document.querySelector('#matterRail a[href^="javascript:"]')`),'unsafe source link rendered');
+    ensure(await evaluate(`document.querySelector('#matterRail').textContent.includes('Which country designation and November year?')`),'actual agent request absent');
+    if(await evaluate(`!!document.querySelector('[data-rail-request="request-adaptive"]')`)){
+      await evaluate(`document.querySelector('[data-rail-section="questions"]').open=true;document.querySelector('[data-rail-request="request-adaptive"]').click()`);
+      ensure(await evaluate(`document.querySelector('#matterRequest')?.value==='request-adaptive' && document.activeElement===document.querySelector('#matterReply')`),'request did not target Copilot reply');
+    }else{
+      ensure(await evaluate(`document.querySelector('#matterRail').textContent.includes('New documents are waiting for a new investigation.') && !document.querySelector('#matterRequest')`),'new documents silently targeted an obsolete run request');
+    }
+    await evaluate(`document.querySelector('[data-rail-section="context"]').open=true`);
+    record.plan={revision:3,steps:['Compare the official notice publication dates.']};writeFileSync(file,JSON.stringify(record));
+    await evaluate(`MatterUI.refresh()`);
+    await waitFor(()=>evaluate(`document.querySelector('#matterRail')?.textContent.includes('Compare the official notice publication dates.')`),10000,'updated actual plan');
+    ensure(await evaluate(`document.querySelector('[data-rail-section="context"]').open && !document.querySelector('#matterRail').textContent.includes('Check the agency notice rule first.')`),'polling reset disclosure or retained stale plan');
+    await shot('adaptive-investigation-rail');
+  }finally{writeFileSync(file,original);}
+});
+await step('Queue saves without execution and pending messages support edit, cancel and honest delivery state',async()=>{
+  const run='run-zz-history-fixture',message='Fictional queued direction: check the notice date.';
+  await evaluate(`window.__queueOriginal=window.fetch;window.__queueStarts=0;window.__queuePayload=null;window.fetch=async function(url,opts){const path=new URL(String(url),location.href).pathname;if(opts?.method==='POST'&&(path.endsWith('/start')||path.endsWith('/resume'))){window.__queueStarts++;throw Error('Queue must never start execution');}if(opts?.method==='POST'&&path==='/api/matters/${matterId}/messages')window.__queuePayload=JSON.parse(opts.body);const response=await window.__queueOriginal.apply(this,arguments);if(!opts?.method&&(path==='/api/matters/${matterId}'||path==='/api/matters/${matterId}/runs/${run}')){const body=await response.json();body.demo=false;body.can_run=true;body.api_key_configured=true;body.requires_new_run=false;return new Response(JSON.stringify(body),{status:200});}return response;};location.hash='#/matter/${matterId}?run=${run}';`);
+  try{
+    await waitFor(()=>evaluate(`document.querySelector('#matterMessageMode') && document.querySelector('#matterRequest')`),15000,'live delivery selector');
+    await evaluate(`document.querySelector('#matterMessageMode').value='queue';document.querySelector('#matterMessageMode').dispatchEvent(new Event('change'));document.querySelector('#matterRequest').value='';`);
+    await typeDraft(message);await visibleClick('#sendMatterMessage');
+    await waitFor(()=>evaluate(`document.querySelector('#matterQueue').textContent.includes(${JSON.stringify(message)})`),10000,'actual queued delivery record');
+    ensure(await evaluate(`window.__queueStarts===0 && window.__queuePayload.mode==='queue' && window.__queuePayload.run_id==='${run}'`),'Queue triggered execution or lost mode/run scope');
+    const detail=await(await fetch(`${base}/api/matters/${matterId}/runs/${run}`)).json();
+    const row=detail.queued_messages.find(q=>q.text===message);ensure(row&&row.state==='queued','message not durably queued');
+    await visibleClick(`[data-queue-edit="${row.queue_id}"]`);
+    await evaluate(`document.querySelector('#queueEditText').value='Fictional revised pending direction.';document.querySelector('#queueEditText').dispatchEvent(new Event('input',{bubbles:true}));`);
+    await visibleClick(`[data-queue-save="${row.queue_id}"]`);
+    await waitFor(()=>evaluate(`document.querySelector('#matterQueue').textContent.includes('Fictional revised pending direction.') && !document.querySelector('#queueEditText')`),10000,'durable queue revision');
+    const changed=await(await fetch(`${base}/api/matters/${matterId}/runs/${run}`)).json();
+    ensure(changed.queued_messages.find(q=>q.queue_id===row.queue_id).revision===2,'queue edit revision not persisted');
+    await visibleClick(`[data-queue-cancel="${row.queue_id}"]`);
+    await waitFor(()=>evaluate(`!document.querySelector('[data-queue-cancel="${row.queue_id}"]') && document.querySelector('#matterQueue').textContent.includes('Cancelled')`),10000,'queue cancellation');
+    const cancelled=await(await fetch(`${base}/api/matters/${matterId}/runs/${run}`)).json();ensure(cancelled.queued_messages.find(q=>q.queue_id===row.queue_id).state==='cancelled','cancellation not persisted');
+    const queued=await(await fetch(`${base}/api/matters/${matterId}/messages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:'Fictional safe-boundary direction.',run_id:run,mode:'steer'})})).json();
+    ensure(queued.delivery?.mode==='steer','steer delivery mode missing');
+    const inbox=`${fixtureRoot}/workspace/matters/${matterId}/workspace/steering-inbox.json`,rows=JSON.parse(readFileSync(inbox,'utf8'));
+    rows.find(q=>q.queue_id===queued.delivery.queue_id).state='delivered';writeFileSync(inbox,JSON.stringify(rows));
+    await evaluate(`MatterUI.refresh()`);
+    await waitFor(()=>evaluate(`document.querySelector('#matterQueue').textContent.includes('Delivered to agent context')`),10000,'honest delivered state');
+    ensure(await evaluate(`document.querySelector('#matterQueue').textContent.includes('not proof it acted on the message') && !document.querySelector('[data-queue-edit="${queued.delivery.queue_id}"]')`),'delivery falsely implied action or remained editable');
+    await shot('message-queue-desktop');
+    await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+    await evaluate(`document.querySelector('#matterQueue').scrollIntoView({block:'center'})`);
+    ensure(await evaluate(`document.querySelector('#matterMessageMode').getBoundingClientRect().width>100 && document.documentElement.scrollWidth<=innerWidth`),'delivery controls overflow mobile workspace');
+    await mobileShot('message-queue-mobile');
+  }finally{await evaluate(`window.fetch=window.__queueOriginal`);await send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});}
+});
 await step('initial Send stays visible, Enter saves once before dispatch, and provider errors stay actionable',async()=>{
   await send('Emulation.setDeviceMetricsOverride',{width:1280,height:720,deviceScaleFactor:1,mobile:false});
   await evaluate(`window.__intakeFetch=window.fetch;window.__intakeStarts=0;window.__intakeSaved=false;window.fetch=async function(url,opts){const p=new URL(String(url),location.href).pathname;if(opts?.method==='POST'&&p.endsWith('/start')){window.__intakeStarts++;const saved=await(await window.__intakeFetch(p.slice(0,-6))).json();window.__intakeSaved=saved.question==='Explain this fictional contract notice to me.';return new Response(JSON.stringify({error:'Synthetic initial provider failure'}),{status:503});}const response=await window.__intakeFetch.apply(this,arguments);if(!opts?.method&&(p==='/api/info'||(p.startsWith('/api/matters/')&&p.split('/').length===4))){const body=await response.json();body.isolated=false;body.demo=false;body.can_run=true;body.api_key_configured=true;return new Response(JSON.stringify(body),{status:200});}return response;};location.hash='#/home';`);

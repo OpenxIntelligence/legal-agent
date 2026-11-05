@@ -85,9 +85,10 @@ class MatterConsoleTests(unittest.TestCase):
             store=unittest.mock.Mock()
             with patch.object(child,'_run_dir'), patch.object(child,'collab_op',return_value={'id':'D1','state':'proposed'}) as op:
                 delivery=child.queue_message('run-owned','Please challenge the date')
-            self.assertEqual(delivery,{'state':'queued','run_id':'run-owned','directive_id':'D1'})
-            self.assertEqual(op.call_args.args[1]['kind'],'redirect')
-            self.assertEqual(op.call_args.args[1]['body'],'Please challenge the date')
+            self.assertEqual(delivery['state'],'queued')
+            self.assertEqual(delivery['mode'],'queue')
+            self.assertEqual(delivery['text'],'Please challenge the date')
+            op.assert_not_called()
             with patch.object(child,'collab_op') as op:
                 with self.assertRaisesRegex(ValueError,'12,000'):child.queue_message('run-owned','x'*12001)
                 op.assert_not_called()
@@ -105,8 +106,8 @@ class MatterConsoleTests(unittest.TestCase):
             with patch.object(child,'_run_dir'), patch.object(child,'collab_op',return_value={'id':'D1'}) as op:
                 child._flush_steering('run-owned')
                 child._flush_steering('run-owned')
-            self.assertEqual(op.call_count,1)
-            self.assertEqual(json.loads((root/'workspace/steering-inbox.json').read_text()),[])
+            op.assert_not_called()  # Worker owns delivery after acquiring execution.
+            self.assertEqual(json.loads((root/'workspace/steering-inbox.json').read_text())[0]['state'],'queued')
 
     def test_unknown_request_cannot_poison_deferred_inbox(self):
         with tempfile.TemporaryDirectory() as tmp:

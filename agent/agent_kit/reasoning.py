@@ -2243,6 +2243,8 @@ TOOL_ACTION_CLASSES = {
     "list_documents": "research",
     "analyze_document": "research",
     "search_corpus": "research",
+    "search_public_sources": "research",
+    "fetch_public_source": "research",
     "sweep_issues": "research",
     "work_status": "research",
     "resolve_query": "research",

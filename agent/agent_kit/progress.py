@@ -278,7 +278,7 @@ def _resume_step(root: Path, run_id: str) -> dict:
             return _go(
                 f"{stall} Try a different action instead of repeating the last one."
             )
-        message = "You have more turns. Continue, and finish with submit_memo."
+        message = "You have more turns. Continue the investigation. Submit a memo only when ready; otherwise preserve unresolved work and pause."
         stop = progress["notes"].get("stop_reason")
         if stop:
             action = progress["notes"].get("stop_action") or ""

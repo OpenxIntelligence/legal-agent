@@ -140,10 +140,13 @@ class AgentLoopTest(unittest.TestCase):
         self.assertEqual("answered", again["status"])
         self.assertEqual(before, len(fake.calls))
 
-    def test_last_turn_asks_for_the_memo(self) -> None:
+    def test_last_turn_does_not_force_an_unfinished_memo(self) -> None:
         fake = support.scripted(self.root, [PLAN, LIST, MEMO])
         run_agent(root=self.root, client=fake.client, turns=3)
-        self.assertIn("submit_memo", str(support.agent_requests(fake)[-1]["input"][-1]))
+        message = str(support.agent_requests(fake)[-1]["input"][-1])
+        self.assertIn("only if the research", message)
+        self.assertIn("resume", message)
+        self.assertNotIn("Finish with submit_memo", message)
 
     def test_a_model_api_failure_pauses_the_run_so_it_can_resume(self) -> None:
         fake = support.scripted(self.root, [LIST, MEMO])

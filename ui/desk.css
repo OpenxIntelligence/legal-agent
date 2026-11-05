@@ -252,3 +252,47 @@
   #matterDesk #matterConversationPanel{grid-row:1}
   #matterDesk .workspace-product{grid-row:2}
 }
+
+/* Run-backed investigation rail: retain detail without a permanent intake wall. */
+#matterDesk .rail-issues,#matterDesk .rail-requests,#matterDesk .rail-sources{list-style:none;padding:0;margin:12px 0 0}
+#matterDesk .rail-issues li,#matterDesk .rail-requests li,#matterDesk .rail-sources li{padding:12px 0;border-top:1px solid var(--line);overflow-wrap:anywhere}
+#matterDesk .rail-issues strong,#matterDesk .rail-requests strong,#matterDesk .rail-sources strong{display:block;font-size:12px;line-height:1.6}
+#matterDesk .rail-issues li>span:not(.finding-status),#matterDesk .rail-sources li>span{display:block;font-size:11px;line-height:1.6;color:var(--muted);margin:5px 0}
+#matterDesk .rail-sources a{display:inline-block;font-size:12px;margin:5px 0}
+#matterDesk .workspace-evidence h3{font-size:12px;line-height:1.5;margin:16px 0 8px}
+#matterDesk .rail-activity{padding-left:17px;margin:8px 0;font-size:11px;line-height:1.6;color:var(--muted)}
+#matterDesk .rail-activity li{margin:8px 0;overflow-wrap:anywhere}
+#matterDesk .rail-gaps{border-top:1px solid var(--line);margin-top:12px}
+#matterDesk .memo-gaps p{white-space:pre-wrap}
+
+/* Keep issue, assessment and inspectable evidence aligned. */
+.findings-table-wrap{overflow-x:auto;margin-top:1rem;max-width:100%}
+.findings-table{width:100%;border-collapse:collapse;text-align:left;font-size:.9rem}
+.findings-table caption{text-align:left;font-weight:600;padding:.5rem 0}
+.findings-table th,.findings-table td{padding:1rem .75rem;vertical-align:top;border-bottom:1px solid var(--line,#d5dfd9);min-width:140px;overflow-wrap:anywhere}
+.findings-table thead th{font-size:.75rem;color:var(--muted,#536963);background:#f1f5f1}
+.findings-table tbody th{width:20%;font-weight:600}
+.findings-table td:nth-child(2){width:45%}
+.findings-table .finding-status{display:block;width:fit-content;margin-top:.5rem}
+.findings-table .matter-citation{margin:.25rem 0}
+
+#matterDesk .delivery-mode-label{display:flex;align-items:center;gap:8px;font-size:11px!important;margin:0 0 5px}
+#matterDesk .delivery-mode-label select{flex:1;min-width:0;min-height:36px;padding:6px;font-size:11px}
+#matterDeliveryHint{font-size:10px!important;line-height:1.5!important;margin:0 0 7px!important}
+#matterQueue{flex:0 1 auto;min-height:0}
+#matterDesk .message-queue{border-top:1px solid var(--line);font-size:11px;margin-top:8px}
+#matterDesk .message-queue summary{cursor:pointer;padding:9px 0;font-weight:600}
+#matterDesk .queue-list{max-height:180px;overflow:auto;overscroll-behavior:contain}
+#matterDesk .queue-message{padding:9px;background:#f2f6ef;margin-bottom:7px;border:1px solid var(--line);border-radius:5px;overflow-wrap:anywhere}
+#matterDesk .queue-message-meta{display:flex;gap:8px;justify-content:space-between;font-size:10px}
+#matterDesk .queue-message p{font-size:11px;line-height:1.55;white-space:pre-wrap;margin:7px 0}
+#matterDesk .queue-message small{font-size:10px;line-height:1.5;color:var(--muted)}
+#matterDesk .queue-message textarea{width:100%;min-height:75px;font-size:13px}
+#matterDesk .queue-actions{display:flex;gap:6px;flex-wrap:wrap}
+#matterDesk .queue-actions button{font-size:11px;min-height:36px;padding:5px 8px}
+@media(max-width:600px){#matterDesk .delivery-mode-label select{font-size:16px}#matterDesk .queue-list{max-height:240px}}
+@media(min-width:1100px) and (max-height:800px){
+  body[data-view="matter"] #matterDesk #matterConversationPanel{overflow-y:auto}
+  #matterDesk .queue-list{max-height:90px}
+  #matterDesk #matterReplyForm{flex-shrink:0}
+}

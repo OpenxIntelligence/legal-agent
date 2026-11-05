@@ -55,13 +55,25 @@ class MatterIntakeTest(unittest.TestCase):
         self.assertIn("counterevidence", objective)
         self.assertEqual("intake_checklist", item["messages"][-1]["kind"])
 
+    def test_no_upload_research_preserves_question_and_requires_sourced_general_answer(self):
+        question = "If the government misses a renewal notice deadline, does the designation extend?"
+        item = self.store.create({"question": question})
+        objective = (self.store.path(item["id"]) / "case/objective.md").read_text()
+        self.assertIn(question, objective)
+        self.assertIn("empty inbox is not a reason to stop legal research", objective)
+        self.assertIn("fetch_public_source", objective)
+        self.assertIn("do not substitute a different", objective)
+        self.assertIn("useful, sourced general rule", objective)
+        self.assertIn("practical next steps", objective)
+        self.assertFalse(any(s.startswith("Add documents") for s in item["missing"]))
+
     def test_followup_queue_receipt_is_explicit_and_persisted(self):
         item = self.store.create(self.body)
         delivery = {"status": "queued", "run_id": "run-synthetic"}
         updated = self.store.message(item["id"], "Inspect the acceptance email.", delivery=delivery)
         self.assertEqual(delivery, updated["messages"][-2]["delivery"])
         self.assertEqual(delivery, updated["messages"][-1]["delivery"])
-        self.assertEqual("Queued for next resume of run run-synthetic; not yet applied.",
+        self.assertEqual("Saved for the next resume of run run-synthetic; not yet delivered or applied.",
                          updated["messages"][-1]["body"])
         self.assertEqual(updated, self.store.get(item["id"]))
 

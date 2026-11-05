@@ -776,40 +776,30 @@ class Console:
             env["LEGAL_AGENT_FAKE_MODEL"] = "1"
         return env
 
-    def queue_message(self, run_id: str, text: str, request_id: str = "") -> dict:
+    def _message_queue(self):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("legal_agent_message_queue", CONSOLE.parent / "agent/agent_kit/message_queue.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def queue_message(self, run_id: str, text: str, request_id: str = "", mode: str = "queue") -> dict:
         with self._launch_lock:
-            if not isinstance(text, str) or not text.strip() or len(text.strip()) > 12000:
-                raise ValueError("Follow-up must contain 1 to 12,000 characters.")
+            text = self._message_queue().validate_text(text)
             self._run_dir(run_id)
             if request_id:
                 record = read_json(self.agent / "workspace/case_records" / f"{run_id}.json") or {}
-                if not any(q.get("id") == request_id for q in record.get("requests", [])):
-                    raise ValueError("Unknown request for this investigation; save the message without a request association.")
-            if self._running():
-                # Never read-modify-write the case record while its agent owns it.
-                import uuid
-                pending_path = self.agent / "workspace/steering-inbox.json"
-                pending = read_json(pending_path) or []
-                item = {"queue_id": uuid.uuid4().hex, "run_id": run_id,
-                        "text": text.strip(), "request_id": request_id}
-                pending.append(item)
-                temporary = pending_path.with_suffix(".tmp")
-                temporary.write_text(json.dumps(pending))
-                temporary.replace(pending_path)
-                return {"state": "queued", "run_id": run_id, "queue_id": item["queue_id"]}
-            return self._queue_message(run_id, text, request_id)
+                if not any(q.get("id") == request_id and q.get("status") == "open" for q in record.get("requests", [])):
+                    raise ValueError("Unknown request or closed request; save without a request association.")
+            return self._message_queue().enqueue(self.agent, run_id, text, request_id, mode)
+
+    def change_queued_message(self, queue_id: str, body: dict) -> dict:
+        return self._message_queue().change(self.agent, queue_id, body.get("op"), body.get("revision"), body.get("text"))
 
     def _flush_steering(self, run_id: str) -> None:
-        pending_path = self.agent / "workspace/steering-inbox.json"
-        pending = read_json(pending_path) or []
-        for item in list(pending):
-            if item.get("run_id") != run_id:
-                continue
-            self._queue_message(run_id, item["text"], item.get("request_id", ""))
-            pending.remove(item)
-            temporary = pending_path.with_suffix(".tmp")
-            temporary.write_text(json.dumps(pending))
-            temporary.replace(pending_path)
+        # The worker delivers queue messages at slice start. UI must not mutate
+        # the case before process ownership is acquired.
+        return None
 
     def _queue_message(self, run_id: str, text: str, request_id: str = "") -> dict:
         if not isinstance(text, str) or not text.strip() or len(text.strip()) > 12000:
@@ -850,7 +840,8 @@ class Console:
         reason = ("demo" if isolated else "preparation_incomplete" if detail.get("status") == "incomplete"
                   else "model_key_missing" if not configured else "")
         detail.update(demo=isolated, api_key_configured=configured, execution_reason=reason,
-                      can_run=not reason, runs=scoped.list_runs(), jobs=scoped.jobs.snapshot()[-5:])
+                      can_run=not reason, runs=scoped.list_runs(), jobs=scoped.jobs.snapshot()[-5:],
+                      queued_messages=scoped._message_queue().listing(scoped.agent))
         # Track file/policy changes beyond the selected run's own record.
         workspace = scoped.agent / "workspace"
         paths = [workspace / "quarantine.json"]
@@ -1169,12 +1160,12 @@ class Console:
     def pending_request_ids(self, run_id: str) -> list[str]:
         """Request answers saved outside the active case record, not yet delivered."""
         self._run_dir(run_id)
-        pending = read_json(self.agent / "workspace/steering-inbox.json") or []
+        pending = self._message_queue().listing(self.agent, run_id)
         if not isinstance(pending, list):
             return []
         ids = []
         for item in pending:
-            if not isinstance(item, dict) or item.get("run_id") != run_id:
+            if not isinstance(item, dict) or item.get("run_id") != run_id or item.get("state") != "queued":
                 continue
             request_id = item.get("request_id")
             if (isinstance(request_id, str) and re.fullmatch(r"R[1-9][0-9]*", request_id)
@@ -1244,6 +1235,7 @@ class Console:
             "case": case,
             "recovery": self.recovery_status(progress, job),
             "pending_request_ids": self.pending_request_ids(run_id),
+            "queued_messages": self._message_queue().listing(self.agent, run_id),
             "events": events,
             "metrics": {
                 **metrics(events, case),
@@ -2587,9 +2579,14 @@ def make_handler(console: Console) -> type[BaseHTTPRequestHandler]:  # noqa: C90
                     console = base_console.matter_context(parts[2])
                     if len(parts) == 4 and parts[3] == "documents":
                         return self._json(base_console.matter_add_documents(parts[2], b))
+                    if len(parts) == 5 and parts[3] == "queue":
+                        with base_console._matter_lock:
+                            changed = console.change_queued_message(parts[4], b)
+                            store.refresh_deliveries(parts[2])
+                        return self._json(changed)
                     if len(parts) == 4 and parts[3] == "messages":
                         with base_console._matter_lock:
-                            delivery = console.queue_message(str(b["run_id"]), b.get("text", ""), str(b.get("request_id", ""))) if b.get("run_id") else None
+                            delivery = console.queue_message(str(b["run_id"]), b.get("text", ""), str(b.get("request_id", "")), str(b.get("mode", "queue"))) if b.get("run_id") else None
                             item = store.message(parts[2], b.get("text", ""), delivery=delivery)
                         result = base_console.matter_detail(item["id"])
                         if delivery:
@@ -2599,7 +2596,8 @@ def make_handler(console: Console) -> type[BaseHTTPRequestHandler]:  # noqa: C90
                         with console._launch_lock:
                             if store.get(parts[2]).get("status") == "incomplete":
                                 raise RuntimeError("Some documents could not be saved. Prepare a complete investigation before starting.")
-                            return self._json(console.start_run(b.get("turns", 10), bool(b.get("step", False))))
+                            store.refresh_deliveries(parts[2])
+                            return self._json(console.start_run(b.get("turns", 30), bool(b.get("step", False))))
                     # Scoped matters cannot reset the workshop or mutate provider config.
                     if parts[3:] in (["reset"], ["release"], ["case"], ["workshop"], ["project"]):
                         raise RuntimeError("This action is not available in a matter.")

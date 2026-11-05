@@ -115,9 +115,40 @@ class MatterStore:
             raise FileNotFoundError("Directory is not an owned Legal Agent matter")
         return path
 
+    def _sync_deliveries(self, path: Path, data: dict) -> None:
+        queue_path = self._safe(path / "workspace/steering-inbox.json")
+        rows = json.loads(queue_path.read_text()) if queue_path.exists() else []
+        by_id = {row.get("queue_id"): row for row in rows if isinstance(row, dict)}
+        for message in data.get("messages", []):
+            delivery = message.get("delivery") or {}
+            current = by_id.get(delivery.get("queue_id"))
+            if not current:
+                continue
+            message["delivery"] = dict(current)
+            if message.get("role") == "user":
+                message["body"] = current["text"]
+                message["kind"] = "followup_cancelled" if current.get("state") == "cancelled" else "followup"
+            else:
+                state = current.get("state", "queued")
+                when = "the next safe tool boundary" if current.get("mode") == "steer" else "the next resume"
+                message["body"] = ("Cancelled before delivery." if state == "cancelled" else
+                    "Delivered into agent context; this does not confirm application." if state == "delivered" else
+                    f"Saved for {when}; not yet delivered or applied.")
+
     def get(self, matter_id: str) -> dict:
         with self._lock:
-            return json.loads((self.path(matter_id) / "matter.json").read_text())
+            path = self.path(matter_id)
+            data = json.loads((path / "matter.json").read_text())
+            self._sync_deliveries(path, data)
+            return data
+
+    def refresh_deliveries(self, matter_id: str) -> dict:
+        with self._lock:
+            path = self.path(matter_id)
+            data = self.get(matter_id)
+            self._objective(path, data)
+            self._write(path, data)
+            return data
 
     def list(self) -> list[dict]:
         with self._lock:
@@ -139,7 +170,7 @@ class MatterStore:
     def _missing(data: dict) -> list[str]:
         missing = []
         if not data["documents"]:
-            missing.append("Add documents or identify which records should support the answer.")
+            missing.append("No documents uploaded. Research public primary sources for legal rules; request personal records only when needed to apply them.")
         if not data["jurisdiction"]:
             missing.append("Jurisdiction is unspecified; applicable law cannot be assumed.")
         if not data["deadline"]:
@@ -164,6 +195,7 @@ class MatterStore:
         case = self._safe(path / "case")
         case.mkdir(exist_ok=True)
         target = self._safe(case / "objective.md")
+        self._sync_deliveries(path, data)
         followups = [m["body"] for m in data["messages"] if m.get("kind") == "followup"]
         content = (
             "# Matter assignment\n\n"
@@ -179,6 +211,17 @@ class MatterStore:
             "Link each material factual assertion to its document and page with an exact passage. "
             "Seek counterevidence and alternative explanations. State gaps and unresolved conflicts. "
             "Do not invent laws, authorities, citations, dates, or missing evidence. "
+            "Preserve the user's actual question, actor, and event: do not substitute a different "
+            "deadline or procedural obligation. If the wording supports materially different readings, "
+            "state those readings and ask a focused clarification while researching what can be answered. "
+            "An empty inbox is not a reason to stop legal research. Use search_public_sources and "
+            "fetch_public_source to obtain public primary authorities; inspect and record their exact "
+            "passages before citing them. Plan research, test the strongest contrary reading, "
+            "and revise the plan from the results. Distinguish retrieval failure from no relevant law. "
+            "Give a useful, sourced general rule where supported, then separate its conditional "
+            "application from unknown personal facts. Never infer the absence of a government notice "
+            "from the user's report or an incomplete search. State source coverage and as-of limits. "
+            "Include practical next steps and the smallest questions that would change the answer. "
             "Ask for missing jurisdiction or scope when needed; do not imply deterministic checks "
             "establish legal correctness. Produce a reviewable draft for qualified human review.\n"
         )
@@ -309,7 +352,8 @@ class MatterStore:
             if metadata and (metadata.get("queued") is True or any(
                     metadata.get(key) == "queued" for key in ("status", "state", "kind"))):
                 run_id = str(metadata.get("run_id") or "selected run")
-                acknowledgment = f"Queued for next resume of run {run_id}; not yet applied."
+                when = "the next safe tool boundary" if metadata.get("mode") == "steer" else "the next resume"
+                acknowledgment = f"Saved for {when} of run {run_id}; not yet delivered or applied."
             user_message = {"role": "user", "body": text, "at": _now(), "kind": "followup"}
             receipt = {"role": "assistant", "body": acknowledgment,
                        "at": _now(), "kind": "instruction_saved"}

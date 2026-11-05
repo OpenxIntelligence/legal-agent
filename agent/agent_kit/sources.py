@@ -4,9 +4,9 @@ The registry describes where law lives and how to characterize what
 comes back: repositories, authority types, citation conventions,
 language and calendar needs, historical-version handling, and access
 limits. It never contains "the law" as static text, and nothing here
-fetches: every repository's access is operator-supplied — supplied
-pages enter through the evidence channel (documents), where quotes
-are verified like any other evidence.
+fetches. Public retrieval is implemented separately in public_sources;
+both fetched pages and operator-supplied pages enter through the evidence
+channel (documents), where quotes are verified like any other evidence.
 
 Routing is deterministic and table-driven: query class, scope, regime,
 and context map to a plan with repositories, ordered steps, blocking
@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import re
 
-REGISTRY_VERSION = 1
+REGISTRY_VERSION = 2
 
 QUERY_CLASSES = (
     "exact_lookup",
@@ -116,6 +116,27 @@ REPOS = {
         "access": "operator-supplied",
     },
 }
+
+# Explicit fetchable official repositories; additions do not imply that a
+# source is binding or that its latest version governs the user's event.
+for _key, _label, _authority in (
+    ("federal-register", "Federal Register", "informational rendition of notices and rules; confirm official edition"),
+    ("ecfr", "eCFR", "current regulatory compilation; not the official legal edition"),
+    ("govinfo", "GovInfo", "official government publications"),
+    ("uscis", "USCIS", "official agency guidance; not a substitute for controlling law"),
+    ("us-supreme-court", "US Supreme Court", "official court source"),
+):
+    REPOS[_key] = {
+        "label": _label, "region": "us-federal", "authority": _authority,
+        "scope_note": "Verify jurisdiction, legal force, effective dates, and later treatment.",
+        "languages": ["English"], "calendar_note": "",
+        "historical": "retrieval date is not the effective date; verify relevant historical version",
+        "citation_format": "official citation or document identifier and section",
+        "access": "bounded-public-fetch",
+    }
+
+for _key in ("uscode", "ew-legislation", "ew-judiciary", "ca-leginfo"):
+    REPOS[_key]["access"] = "bounded-public-fetch"
 
 REGIONS = {
     "ew": {

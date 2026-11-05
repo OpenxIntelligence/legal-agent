@@ -17,7 +17,7 @@ from openai import (
     RateLimitError,
 )
 
-from agent_kit import settings, tools
+from agent_kit import settings, tools, message_queue
 from agent_kit.case_record import ROOT_TASK, CaseRecord
 from agent_kit.progress import (
     ContextMeasureError,
@@ -111,6 +111,7 @@ def run_agent(*, root: Path, client: OpenAI, turns: int = 30) -> dict:
     _begin_slice(root, run_id, turns)
     messages: list = [{"role": "user", "content": objective}]
     messages.extend(steering_messages(root=root, run_id=run_id, messages=messages))
+    messages.extend(message_queue.deliver(root, run_id, messages, include_queue=True))
     progress = _run_turns(
         root=root,
         client=client,
@@ -126,6 +127,15 @@ def run_agent(*, root: Path, client: OpenAI, turns: int = 30) -> dict:
 def resume_run(*, root: Path, run_id: str, client: OpenAI, turns: int = 15) -> dict:
     settings.validate_runtime_config()
     root = Path(root)
+    # The worker owns the case now. A queued answer must reach the blocked
+    # request before resume checks eligibility; unrelated directions must not
+    # be consumed by a rejected resume (terminal, budget or context blocked).
+    before = load_progress(root, run_id)
+    if before["status"] == "needs_input":
+        requests = CaseRecord(root, run_id).data.get("requests", [])
+        if requests and requests[-1].get("status") == "open":
+            message_queue.deliver(root, run_id, list(before["messages"]),
+                                  include_queue=True, request_id=requests[-1]["id"])
     step = resume(root, run_id)
     if step["message"] is None:
         data = load_progress(root, run_id)
@@ -139,6 +149,7 @@ def resume_run(*, root: Path, run_id: str, client: OpenAI, turns: int = 15) -> d
     ).read_text()
     messages.append({"role": "user", "content": step["message"]})
     messages.extend(steering_messages(root=root, run_id=run_id, messages=messages))
+    messages.extend(message_queue.deliver(root, run_id, messages, include_queue=True))
     progress = _run_turns(
         root=root,
         client=client,
@@ -187,6 +198,9 @@ def _run_turns(
     budget = settings.run_token_budget()
     context_cap = settings.max_context_bytes()
     for index in range(turns):
+        # A completed model/tool pair is the safe steering boundary. Queue
+        # delivery waits for resume; steering enters before the next model call.
+        messages.extend(message_queue.deliver(root, run_id, messages))
         # Enforcement boundary: the budget is checked between turns, before the
         # next model call — not before the tool/verify calls inside a turn.
         # A turn already in flight can therefore overshoot the budget by up to
@@ -262,7 +276,11 @@ def _run_turns(
             messages.append(
                 {
                     "role": "user",
-                    "content": "This is your last turn. Finish with submit_memo.",
+                    "content": ("This is the last turn in this bounded slice, not a deadline to conclude. "
+                                "Use the most useful next tool. Call submit_memo only if the research "
+                                "and review are ready; otherwise save an updated plan of completed "
+                                "work, open questions, and next sources. The run will pause and can "
+                                "resume. Never file an empty-inbox non-answer merely to finish a slice."),
                 }
             )
         if (

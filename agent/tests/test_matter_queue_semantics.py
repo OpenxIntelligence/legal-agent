@@ -15,6 +15,7 @@ spec = importlib.util.spec_from_file_location('matter_queue_ui', REPO / 'ui/ui.p
 ui = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ui)
 from agent_kit.case_record import CaseRecord
+from agent_kit import message_queue
 from agent_kit.progress import new_run, load_progress
 from legal_agent import loop
 
@@ -30,12 +31,8 @@ class MatterQueueSemanticsTests(unittest.TestCase):
             with patch.object(console, '_process_env', return_value=env):
                 receipt = console.queue_message(run_id, 'Inspect the fictional acceptance email first.')
             self.assertEqual('queued', receipt['state'])
-            case = CaseRecord(root, run_id)
-            directive = case.directives()[0]
-            self.assertEqual(receipt['directive_id'], directive['id'])
-            self.assertEqual('proposed', directive['state'])
-            self.assertEqual('client', directive['author']['role'])
-            self.assertNotIn(run_id, directive.get('injected_runs', []))
+            self.assertEqual('queue', receipt['mode'])
+            self.assertEqual('queued', console.run_detail(run_id)['queued_messages'][0]['state'])
             delivered = []
 
             def no_provider_turns(**kwargs):
@@ -49,17 +46,17 @@ class MatterQueueSemanticsTests(unittest.TestCase):
                     patch.object(loop, '_run_turns', side_effect=no_provider_turns), redirect_stdout(StringIO()):
                 loop.resume_run(root=root, run_id=run_id, client=object(), turns=1)
                 loop.resume_run(root=root, run_id=run_id, client=object(), turns=1)
-            first = [m for m in delivered[0] if 'Steering directive' in m.get('content', '')]
-            second = [m for m in delivered[1] if 'Steering directive' in m.get('content', '')]
+            first = [m for m in delivered[0] if 'User direction' in m.get('content', '')]
+            second = [m for m in delivered[1] if 'User direction' in m.get('content', '')]
             self.assertEqual(1, len(first))
             self.assertIn('Inspect the fictional acceptance email first.', first[0]['content'])
             # The durable conversation includes the already delivered direction,
             # but it is never inserted a second time on resume.
             self.assertEqual(1, len(second))
             self.assertEqual(first, second)
-            persisted = CaseRecord(root, run_id).directives()[0]
-            self.assertEqual([run_id], persisted['injected_runs'])
-            self.assertEqual('proposed', persisted['state'])  # delivery is never application
+            persisted = console.run_detail(run_id)['queued_messages'][0]
+            self.assertEqual('delivered', persisted['state'])
+            self.assertEqual([], CaseRecord(root, run_id).directives())  # no false application/approval
 
     def test_deferred_answer_metadata_unblocks_resume_choice_and_clears_after_flush(self):
         with tempfile.TemporaryDirectory() as tmp, patch.dict(os.environ, {}, clear=True):
@@ -83,7 +80,7 @@ class MatterQueueSemanticsTests(unittest.TestCase):
             reopened = ui.Console(REPO, data_root=root, parent=ui.Console(REPO))
             self.assertEqual(['R1'], reopened.run_detail(run_id)['pending_request_ids'])
             with patch.object(console, '_process_env', return_value=env):
-                console._flush_steering(run_id)
+                message_queue.deliver(root, run_id, [], include_queue=True)
             self.assertEqual([], console.run_detail(run_id)['pending_request_ids'])
             self.assertEqual('answered', CaseRecord(root, run_id).data['requests'][0]['status'])
 
